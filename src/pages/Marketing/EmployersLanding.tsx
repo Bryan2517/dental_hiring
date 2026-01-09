@@ -1,11 +1,10 @@
 import { Link } from 'react-router-dom';
 import { AppShell } from '../../layouts/AppShell';
-import { EmployerTokenWidget } from '../../components/EmployerTokenWidget';
 import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { TagPill } from '../../components/TagPill';
 import { Stepper } from '../../components/Stepper';
-import { candidates, walletStats } from '../../lib/mockData';
+import { candidates } from '../../lib/mockData';
 import { ClipboardList, Clock, FileCheck, Sparkles, Wallet } from 'lucide-react';
 
 const quickActions = [
@@ -35,7 +34,10 @@ const advantages = [
 ];
 
 const faq = [
-  { q: 'How do tokens work?', a: 'Tokens are earned via MR.BUR purchases and spent on job posts, boosts, and featured slots.' },
+  {
+    q: 'How does pricing work?',
+    a: 'Flat-fee plans cover job posts, boosts, and featured listings so clinics can budget confidently.'
+  },
   { q: 'Can I reuse templates?', a: 'Yes, save job templates and reuse requirements for similar roles.' },
   { q: 'Do you support internships?', a: 'Internship and attachment filters help clinics find student talent quickly.' }
 ];
@@ -44,6 +46,21 @@ const hiringStats = [
   { label: 'Avg. time to shortlist', value: '48 hrs' },
   { label: 'Active clinics', value: '180+' },
   { label: 'Qualified matches', value: '1,920' }
+];
+
+const processHighlights = [
+  {
+    title: 'Launch your role',
+    desc: 'Dental templates and clinical checklists get jobs live in minutes.'
+  },
+  {
+    title: 'Boost visibility',
+    desc: 'Feature listings and share across channels to draw the right candidates.'
+  },
+  {
+    title: 'Close faster',
+    desc: 'Pipeline clarity keeps candidates flowing from Applied to Hired with ease.'
+  }
 ];
 
 export default function EmployersLanding() {
@@ -59,12 +76,11 @@ export default function EmployersLanding() {
             </p>
             <h1 className="text-4xl font-bold text-gray-900 md:text-5xl">Hire trusted dental talent faster.</h1>
             <p className="text-lg text-gray-600">
-              Dental-first hiring with role templates, clinical skill checklists, and a token wallet that keeps spend
-              predictable.
+              Dental-first hiring with role templates, clinical skill checklists, and transparent pricing that keeps every posting predictable.
             </p>
             <div className="flex flex-wrap gap-3">
               <Button variant="primary" size="lg" asChild>
-                <Link to="/employer/post-job">Post a Job (Use Tokens)</Link>
+                <Link to="/employer/post-job">Post a Job</Link>
               </Button>
               <Button variant="secondary" size="lg" asChild>
                 <Link to="/employer/applicants">Browse Candidates</Link>
@@ -72,7 +88,7 @@ export default function EmployersLanding() {
             </div>
             <div className="flex flex-wrap gap-2">
               <TagPill label="Dental-specific matching" />
-              <TagPill label="Token pricing" />
+              <TagPill label="Transparent billing" />
               <TagPill label="Applicants pipeline" />
             </div>
           </div>
@@ -105,15 +121,13 @@ export default function EmployersLanding() {
         </div>
       </section>
 
-      <section className="section mt-8">
-        <EmployerTokenWidget wallet={walletStats} />
-      </section>
-
       <section className="section mt-10 grid gap-4 md:grid-cols-3 md:auto-rows-fr items-stretch">
         {quickActions.map((item) => (
           <Card key={item.title} className="flex h-full flex-col p-6">
-            <p className="text-lg font-semibold text-gray-900">{item.title}</p>
-            <p className="mt-2 text-sm text-gray-600">{item.desc}</p>
+            <div>
+              <p className="text-lg font-semibold text-gray-900">{item.title}</p>
+              <p className="mt-2 text-sm text-gray-600">{item.desc}</p>
+            </div>
             <div className="mt-auto pt-4">
               <Link to={item.to} className="inline-flex text-sm font-semibold text-brand">
                 Go now &gt;
@@ -123,31 +137,20 @@ export default function EmployersLanding() {
         ))}
       </section>
 
-      <section id="tokens" className="section mt-12 rounded-3xl bg-white/90 p-6 shadow-sm md:p-10">
+      <section className="section mt-12 rounded-3xl bg-white/90 p-6 shadow-sm md:p-10">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-semibold text-brand">How tokens work</p>
-            <h2 className="text-2xl font-bold text-gray-900">Predictable spend, faster hires</h2>
+            <p className="text-sm font-semibold text-brand">How it works</p>
+            <h2 className="text-2xl font-bold text-gray-900">Predictable hiring in three steps</h2>
           </div>
         </div>
         <div className="mt-5 grid gap-4 md:grid-cols-3">
-          <Card className="p-5">
-            <p className="text-sm font-semibold text-gray-900">1) Buy MR.BUR products</p>
-            <p className="text-sm text-gray-600">Earn tokens with every purchase.</p>
-          </Card>
-          <Card className="p-5">
-            <p className="text-sm font-semibold text-gray-900">2) Spend tokens</p>
-            <p className="text-sm text-gray-600">Post, boost, and feature jobs instantly.</p>
-          </Card>
-          <Card className="p-5">
-            <p className="text-sm font-semibold text-gray-900">3) Hire faster</p>
-            <p className="text-sm text-gray-600">Dental-specific matching improves response rates.</p>
-          </Card>
-        </div>
-        <div className="mt-5 flex flex-wrap gap-2">
-          <TagPill label="Job Post: 15 tokens" highlighted />
-          <TagPill label="Boost: 10 tokens" />
-          <TagPill label="Featured: 25 tokens" />
+          {processHighlights.map((item) => (
+            <Card key={item.title} className="p-5">
+              <p className="text-sm font-semibold text-gray-900">{item.title}</p>
+              <p className="text-sm text-gray-600">{item.desc}</p>
+            </Card>
+          ))}
         </div>
       </section>
 
@@ -256,10 +259,10 @@ export default function EmployersLanding() {
               <ClipboardList className="h-4 w-4 text-brand" />
               Structured dental requirements
             </div>
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-brand" />
-              Premium token rewards
-            </div>
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-brand" />
+                Premium hiring insights
+              </div>
           </div>
         </Card>
       </section>

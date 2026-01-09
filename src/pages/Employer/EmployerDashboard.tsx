@@ -1,12 +1,11 @@
 import { DashboardShell } from '../../layouts/DashboardShell';
-import { candidates, jobs, tokenTransactions, walletStats } from '../../lib/mockData';
-import { TransactionList } from '../../components/TransactionList';
+import { candidates, jobs } from '../../lib/mockData';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Link } from 'react-router-dom';
 import { TagPill } from '../../components/TagPill';
-import { TokenWalletPanel } from '../../components/TokenWalletPanel';
 import { Breadcrumbs } from '../../components/Breadcrumbs';
+import { JobStage } from '../../lib/types';
 
 const sidebarLinks = [
   { to: '/employer/dashboard', label: 'Overview' },
@@ -15,14 +14,21 @@ const sidebarLinks = [
   { to: '/jobs', label: 'Job board' }
 ];
 
+const pipelineStages: JobStage[] = ['Applied', 'Shortlisted', 'Interview', 'Offer', 'Hired', 'Rejected'];
+
 export default function EmployerDashboard() {
   const activeJobs = jobs.slice(0, 5);
+  const stageCounts = pipelineStages.map((stage) => ({
+    stage,
+    count: candidates.filter((c) => c.status === stage).length
+  }));
+  const highlightCandidates = candidates.slice(0, 3);
 
   return (
     <DashboardShell
       sidebarLinks={sidebarLinks}
       title="Employer Dashboard"
-      subtitle="Track tokens, manage postings, and review applicants."
+      subtitle="Manage postings and review applicants."
       hideNavigation
       actions={
         <Button variant="primary" asChild>
@@ -33,8 +39,6 @@ export default function EmployerDashboard() {
       <Breadcrumbs items={[{ label: 'Employer Home', to: '/employers' }, { label: 'Dashboard' }]} />
       <div className="grid gap-4 xl:grid-cols-[1fr,320px]">
         <div className="space-y-4">
-          <TokenWalletPanel wallet={walletStats} />
-
           <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
@@ -85,7 +89,48 @@ export default function EmployerDashboard() {
           </div>
         </div>
 
-        <TransactionList transactions={tokenTransactions} />
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">Pipeline snapshot</h3>
+              <Link to="/employer/applicants" className="text-xs font-semibold text-brand hover:text-brand-hover">
+                View pipeline
+              </Link>
+            </div>
+            <div className="mt-3 grid gap-2">
+              {stageCounts.map((item) => (
+                <div key={item.stage} className="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2 text-sm text-gray-700">
+                  <span>{item.stage}</span>
+                  <span className="font-semibold text-gray-900">{item.count}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">Candidate highlights</h3>
+              <Badge variant="outline">{candidates.length} total</Badge>
+            </div>
+            <div className="mt-3 space-y-2">
+              {highlightCandidates.map((candidate) => (
+                <div
+                  key={candidate.id}
+                  className="flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50 px-3 py-2 text-sm text-gray-700"
+                >
+                  <div>
+                    <p className="font-semibold text-gray-900">{candidate.name}</p>
+                    <p className="text-xs text-gray-500">{candidate.school}</p>
+                  </div>
+                  <Badge variant="outline">{candidate.status}</Badge>
+                </div>
+              ))}
+            </div>
+            <div className="mt-3 text-xs text-gray-500">
+              Updated as of {new Date().toLocaleDateString()}
+            </div>
+          </div>
+        </div>
       </div>
     </DashboardShell>
   );

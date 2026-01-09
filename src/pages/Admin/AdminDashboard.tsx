@@ -22,23 +22,18 @@ const moderationQueue = [
 const analytics = [
   { label: 'Jobs this week', value: 28 },
   { label: 'New students', value: 64 },
-  { label: 'Resume unlocks', value: 120 },
+  { label: 'Resume views', value: 120 },
   { label: 'Reports filed', value: 3 }
 ];
 
 export default function AdminDashboard() {
-  const [tokenRule, setTokenRule] = useState({
-    post: 15,
-    boost: 10,
-    unlock: 5,
-    notes: 'Align pricing across markets'
-  });
+  const [platformNotes, setPlatformNotes] = useState('Align templates and pricing across markets.');
 
   return (
     <DashboardShell
       sidebarLinks={sidebarLinks}
       title="Admin Console"
-      subtitle="Moderation queue, token rules, reports, and analytics (mock)."
+    subtitle="Moderation queue, reports, and analytics (mock)."
       actions={<Badge variant="info">UI only</Badge>}
     >
       <Breadcrumbs items={[{ label: 'Admin', to: '/admin' }, { label: 'Overview' }]} />
@@ -71,32 +66,16 @@ export default function AdminDashboard() {
         </Card>
 
         <Card className="p-5">
-          <h3 className="text-lg font-semibold text-gray-900">Token Rules</h3>
-          <div className="mt-3 grid gap-3">
-            <Input
-              label="Post a job (tokens)"
-              type="number"
-              value={tokenRule.post}
-              onChange={(e) => setTokenRule({ ...tokenRule, post: Number(e.target.value) })}
-            />
-            <Input
-              label="Boost job (tokens)"
-              type="number"
-              value={tokenRule.boost}
-              onChange={(e) => setTokenRule({ ...tokenRule, boost: Number(e.target.value) })}
-            />
-            <Input
-              label="Unlock resume (tokens)"
-              type="number"
-              value={tokenRule.unlock}
-              onChange={(e) => setTokenRule({ ...tokenRule, unlock: Number(e.target.value) })}
-            />
-            <Textarea
-              label="Notes"
-              value={tokenRule.notes}
-              onChange={(e) => setTokenRule({ ...tokenRule, notes: e.target.value })}
-            />
-            <Button variant="primary">Save rules (mock)</Button>
+          <h3 className="text-lg font-semibold text-gray-900">Platform notes</h3>
+          <p className="text-sm text-gray-600">Document moderation cues and policy reminders for the admin team.</p>
+          <Textarea
+            className="mt-3"
+            label="Notes"
+            value={platformNotes}
+            onChange={(e) => setPlatformNotes(e.target.value)}
+          />
+          <div className="mt-3">
+            <Button variant="primary">Save notes (mock)</Button>
           </div>
         </Card>
       </div>

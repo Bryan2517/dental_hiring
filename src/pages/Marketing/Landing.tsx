@@ -19,22 +19,22 @@ const reasons = [
     icon: <Sparkles className="h-6 w-6 text-brand" />
   },
   {
-    title: 'Token-friendly pricing',
-    desc: 'Buy, track, and spend tokens for posts, boosts, and resume unlocks in one wallet.',
+    title: 'Transparent plans',
+    desc: 'Flat fees cover posts, boosts, and featured slots so clinics can budget with confidence.',
     icon: <Star className="h-6 w-6 text-brand" />
   }
 ];
 
-const tokenCards = [
-  { title: 'Post a job - 15 tokens', desc: 'Reach dental assistants, nurses, interns, and coordinators.' },
-  { title: 'Boost for 7 days - 10 tokens', desc: 'Pin your job to the top of search results for faster views.' },
-  { title: 'Unlock resume - 5 tokens', desc: 'Preview candidate profiles, notes, and ratings instantly.' }
+const planHighlights = [
+  { title: 'Post a job', desc: 'Reach dental assistants, nurses, interns, and coordinators with one template.' },
+  { title: 'Boost visibility', desc: 'Pin your role to the top for faster views and responses.' },
+  { title: 'Unlock insights', desc: 'Preview candidates and notes instantly to refine shortlists.' }
 ];
 
 const testimonials = [
   { name: 'Dr. Sarah Lim', role: 'Clinical Director, Align Studio', text: 'We found two ortho assistants in under a week. The dental-specific tags filter exactly what we need.' },
   { name: 'Arif Rahman', role: 'Dental Student, KL', text: 'Quick Apply + screening questions helped me land interviews without endless emails.' },
-  { name: 'Hui Min', role: 'Clinic Manager, Bluewave Dental', text: 'Token wallet keeps costs predictable. Love the applicants pipeline view.' }
+  { name: 'Hui Min', role: 'Clinic Manager, Bluewave Dental', text: 'Operational dashboards keep spend predictable. Love the applicants pipeline view.' }
 ];
 
 export default function Landing() {
@@ -85,12 +85,12 @@ export default function Landing() {
               ))}
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <MiniStat label="Active jobs" value="200+" />
-            <MiniStat label="Dental resumes" value="5,100" />
-            <MiniStat label="Avg. time to shortlist" value="48h" />
-            <MiniStat label="Token spent past week" value="3.2k" />
-          </div>
+        <div className="grid grid-cols-2 gap-3">
+          <MiniStat label="Active jobs" value="200+" />
+          <MiniStat label="Dental resumes" value="5,100" />
+          <MiniStat label="Avg. time to shortlist" value="48h" />
+          <MiniStat label="Interviews scheduled weekly" value="320+" />
+        </div>
         </div>
       </div>
 
@@ -126,16 +126,16 @@ export default function Landing() {
       <section className="mt-12 rounded-3xl bg-white p-6 shadow-card">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-sm font-semibold text-brand">Token model</p>
-            <h3 className="text-xl font-bold text-gray-900">Predictable pricing for clinics</h3>
-            <p className="text-sm text-gray-600">Buy tokens once, use them for posts, boosts, and unlocks.</p>
+            <p className="text-sm font-semibold text-brand">Pricing</p>
+            <h3 className="text-xl font-bold text-gray-900">Transparent plans for busy clinics</h3>
+            <p className="text-sm text-gray-600">Flat-rate packages cover posts, boosts, and featured roles with predictable billing.</p>
           </div>
           <Button variant="primary" onClick={() => navigate('/employer/dashboard')}>
-            Manage wallet
+            Explore employer tools
           </Button>
         </div>
         <div className="mt-4 grid gap-4 md:grid-cols-3">
-          {tokenCards.map((card) => (
+          {planHighlights.map((card) => (
             <Card key={card.title} className="p-4">
               <h4 className="text-sm font-semibold text-gray-900">{card.title}</h4>
               <p className="text-sm text-gray-600">{card.desc}</p>

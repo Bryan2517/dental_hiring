@@ -23,9 +23,9 @@ export default function About() {
             </p>
           </Card>
           <Card className="p-5">
-            <h3 className="text-lg font-semibold text-gray-900">Tokens, not surprises</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Transparent pricing</h3>
             <p className="mt-2 text-sm text-gray-600">
-              Post, boost, and unlock resumes with predictable token pricing. Wallet history is always visible.
+              Flat-rate packages cover posting, boosting, and featuring roles so clinics can plan their hiring spend.
             </p>
           </Card>
           <Card className="p-5">

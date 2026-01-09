@@ -1,4 +1,4 @@
-import { Application, Candidate, Job, Resume, Transaction, WalletStats } from './types';
+import { Application, Candidate, Job, Resume } from './types';
 
 export const jobs: Job[] = [
   {
@@ -12,7 +12,7 @@ export const jobs: Job[] = [
     shiftType: 'Day',
     internshipAvailable: false,
     salaryRange: '$2,800 - $3,500',
-    benefits: ['Medical', 'CPD tokens', 'Annual bonus'],
+    benefits: ['Medical', 'CPD allowance', 'Annual bonus'],
     requirements: ['1+ year chairside', 'Comfortable with digital x-rays', 'Infection control certificate'],
     postedAt: '2024-05-12',
     experienceLevel: 'Junior',
@@ -518,15 +518,6 @@ export const candidates: Candidate[] = [
   }
 ];
 
-export const tokenTransactions: Transaction[] = [
-  { id: 'txn-1', type: 'credit', amount: 120, description: 'Purchased 120 tokens', date: '2024-05-10' },
-  { id: 'txn-2', type: 'debit', amount: 15, description: 'Job post: Surgical Assistant', date: '2024-05-11' },
-  { id: 'txn-3', type: 'debit', amount: 5, description: 'Unlock resume: Amira Rahman', date: '2024-05-11' },
-  { id: 'txn-4', type: 'debit', amount: 10, description: 'Boost job for 7 days', date: '2024-05-12' },
-  { id: 'txn-5', type: 'credit', amount: 60, description: 'Top-up', date: '2024-05-13' },
-  { id: 'txn-6', type: 'debit', amount: 15, description: 'Job post: Orthodontic Assistant', date: '2024-05-14' }
-];
-
 export const applications: Application[] = [
   { id: 'app-1', jobId: 'job-1', status: 'Applied', appliedAt: '2024-05-12', candidateName: 'Amira Rahman' },
   { id: 'app-2', jobId: 'job-8', status: 'Shortlisted', appliedAt: '2024-05-10', candidateName: 'Sofia Tan' },
@@ -536,20 +527,7 @@ export const applications: Application[] = [
 ];
 
 export const resumes: Resume[] = [
-  { id: 'res-1', name: 'Amira_Rahman_CV.pdf', uploadedAt: '2024-05-01' },
-  { id: 'res-2', name: 'Clinical_Scans_Portfolio.pdf', uploadedAt: '2024-04-20' },
-  { id: 'res-3', name: 'Dental_Assistant_Profile.docx', uploadedAt: '2024-03-18' }
+  { id: 'res-1', name: 'Amira_Rahman_CV.pdf', uploadedAt: '2024-05-01', category: 'Resume' },
+  { id: 'res-2', name: 'Clinical_Scans_Portfolio.pdf', uploadedAt: '2024-04-20', category: 'Portfolio' },
+  { id: 'res-3', name: 'Dental_Assistant_Profile.docx', uploadedAt: '2024-03-18', category: 'Resume' }
 ];
-
-export const walletStats: WalletStats = {
-  balance: 1250,
-  tier: 'VIP',
-  earnedThisMonth: 320,
-  spentThisMonth: 180,
-  nextTierIn: 150,
-  recentTransactions: [
-    { id: 'w-1', label: 'Order #MB-10482', delta: 120 },
-    { id: 'w-2', label: 'Job Post', delta: -60 },
-    { id: 'w-3', label: 'Boost Job', delta: -40 }
-  ]
-};

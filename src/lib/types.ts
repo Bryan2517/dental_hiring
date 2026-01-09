@@ -39,27 +39,6 @@ export interface Candidate {
   interestedIn?: string;
 }
 
-export interface Transaction {
-  id: string;
-  type: 'credit' | 'debit';
-  amount: number;
-  description: string;
-  date: string;
-  balanceAfter?: number;
-}
-
-export interface WalletStats {
-  balance: number;
-  tier: 'Standard' | 'VIP' | 'Platinum';
-  earnedThisMonth: number;
-  spentThisMonth: number;
-  nextTierIn: number;
-  recentTransactions: Array<{
-    id: string;
-    label: string;
-    delta: number;
-  }>;
-}
 
 export interface Application {
   id: string;
@@ -73,4 +52,5 @@ export interface Resume {
   id: string;
   name: string;
   uploadedAt: string;
+  category?: 'Resume' | 'Cover letter' | 'Portfolio' | 'Certificate' | 'Other';
 }

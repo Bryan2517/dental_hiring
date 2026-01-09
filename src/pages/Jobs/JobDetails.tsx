@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { AppShell } from '../../layouts/AppShell';
 import { jobs, resumes } from '../../lib/mockData';
@@ -14,6 +14,10 @@ import { Breadcrumbs } from '../../components/Breadcrumbs';
 export default function JobDetails() {
   const { id } = useParams<{ id: string }>();
   const job = useMemo(() => jobs.find((j) => j.id === id), [id]);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0 });
+  }, [id]);
   const [showApply, setShowApply] = useState(false);
   const navigate = useNavigate();
 

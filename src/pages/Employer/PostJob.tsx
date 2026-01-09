@@ -38,7 +38,7 @@ export default function PostJob() {
     trainingProvided: true,
     salaryRange: '$2,800 - $3,500',
     schedule: '5-day week, rotating weekends',
-    benefits: 'Medical, CPD tokens, Annual bonus'
+    benefits: 'Medical coverage, CPD allowance, Annual bonus'
   });
 
   const next = () => setActiveStep((s) => Math.min(s + 1, steps.length - 1));

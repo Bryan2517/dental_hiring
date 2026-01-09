@@ -37,7 +37,7 @@ export default function RoleChooser() {
               <div>
                 <p className="text-lg font-semibold text-gray-900">I'm an Employer</p>
                 <p className="text-sm text-gray-600">
-                  Post jobs, spend tokens, and manage your applicants pipeline.
+                  Post jobs and manage your applicants pipeline with clarity.
                 </p>
               </div>
               <span className="text-sm font-semibold text-brand group-hover:text-brand-hover">

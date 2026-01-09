@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AppShell } from '../../layouts/AppShell';
 import { jobs as jobData, resumes } from '../../lib/mockData';
 import { Job } from '../../lib/types';
@@ -90,6 +90,10 @@ export default function JobsList() {
   };
 
   const resetFilters = () => setFilters(defaultFilters);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0 });
+  }, [page]);
 
   return (
     <AppShell padded background="muted">
