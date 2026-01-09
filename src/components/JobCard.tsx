@@ -1,0 +1,103 @@
+import { Link, useNavigate } from 'react-router-dom';
+import type { KeyboardEvent } from 'react';
+import { Building2, MapPin, Sparkles, Star } from 'lucide-react';
+import { Job } from '../lib/types';
+import { Badge } from './ui/badge';
+import { TagPill } from './TagPill';
+import { Button } from './ui/button';
+import { timeAgo } from '../lib/utils';
+
+interface JobCardProps {
+  job: Job;
+  onApply?: (job: Job) => void;
+}
+
+export function JobCard({ job, onApply }: JobCardProps) {
+  const navigate = useNavigate();
+  const goToDetails = () => navigate(`/jobs/${job.id}`);
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      goToDetails();
+    }
+  };
+
+  return (
+    <div
+      className="flex flex-col gap-4 rounded-3xl border border-gray-100 bg-white/90 p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg focus-within:ring-2 focus-within:ring-brand/30 cursor-pointer"
+      onClick={goToDetails}
+      onKeyDown={handleKeyDown}
+      role="button"
+      tabIndex={0}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="space-y-1">
+          <p className="inline-flex items-center gap-2 rounded-full bg-brand/10 px-3 py-1 text-xs font-semibold text-brand">
+            {job.roleType}
+            <span className="text-gray-500">- {timeAgo(job.postedAt)}</span>
+          </p>
+          <h3 className="text-xl font-semibold text-gray-900">{job.clinicName}</h3>
+          <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
+            <span className="inline-flex items-center gap-1">
+              <Building2 className="h-4 w-4 text-brand" />
+              {job.employmentType}
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <MapPin className="h-4 w-4 text-brand" />
+              {job.city}, {job.country}
+            </span>
+            <span className="inline-flex items-center gap-1 text-amber-700">
+              <Star className="h-4 w-4" />
+              {job.experienceLevel}
+            </span>
+          </div>
+        </div>
+        <div className="flex flex-col items-end gap-2 text-right">
+          <Badge variant="default" className="text-sm">
+            {job.salaryRange}
+          </Badge>
+          <div className="flex gap-2">
+            {job.newGradWelcome && <Badge variant="info">New grad friendly</Badge>}
+            {job.trainingProvided && <Badge variant="success">Training provided</Badge>}
+          </div>
+        </div>
+      </div>
+
+      <p className="text-sm text-gray-700 leading-relaxed">{job.description}</p>
+
+      <div className="flex flex-wrap gap-2">
+        {job.specialtyTags.slice(0, 4).map((tag) => (
+          <TagPill key={tag} label={tag} />
+        ))}
+      </div>
+
+      <div className="flex items-center justify-between gap-3 pt-2">
+        <div className="flex flex-wrap gap-2 text-xs text-gray-600">
+          {job.requirements.slice(0, 2).map((req) => (
+            <span key={req} className="rounded-full bg-gray-100 px-3 py-1">
+              {req}
+            </span>
+          ))}
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link to={`/jobs/${job.id}`} onClick={(event) => event.stopPropagation()}>
+              Details
+            </Link>
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
+            rightIcon={<Sparkles className="h-4 w-4" />}
+            onClick={(event) => {
+              event.stopPropagation();
+              onApply?.(job);
+            }}
+          >
+            Quick apply
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}

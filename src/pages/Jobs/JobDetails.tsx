@@ -1,0 +1,170 @@
+import { useMemo, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { AppShell } from '../../layouts/AppShell';
+import { jobs, resumes } from '../../lib/mockData';
+import { Badge } from '../../components/ui/badge';
+import { TagPill } from '../../components/TagPill';
+import { Button } from '../../components/ui/button';
+import { ApplyModal } from '../../components/ApplyModal';
+import { Building2, MapPin, Share2, ShieldCheck, Sparkles, Star, Wallet } from 'lucide-react';
+import { Job } from '../../lib/types';
+import { timeAgo } from '../../lib/utils';
+import { Breadcrumbs } from '../../components/Breadcrumbs';
+
+export default function JobDetails() {
+  const { id } = useParams<{ id: string }>();
+  const job = useMemo(() => jobs.find((j) => j.id === id), [id]);
+  const [showApply, setShowApply] = useState(false);
+  const navigate = useNavigate();
+
+  if (!job) {
+    return (
+      <AppShell>
+        <div className="rounded-2xl border border-dashed border-gray-200 bg-white p-6 text-center">
+          <p className="text-lg font-semibold text-gray-900">Job not found</p>
+          <p className="text-sm text-gray-600">This posting is unavailable. Browse other roles instead.</p>
+          <Button variant="primary" className="mt-4" onClick={() => navigate('/jobs')}>
+            Back to jobs
+          </Button>
+        </div>
+      </AppShell>
+    );
+  }
+
+  const similarJobs = jobs.filter((j) => j.id !== job.id && j.specialtyTags.some((tag) => job.specialtyTags.includes(tag))).slice(0, 3);
+
+  return (
+    <AppShell padded background="muted">
+      <div className="mb-3 flex items-center justify-between">
+        <Breadcrumbs items={[{ label: 'Home', to: '/seekers' }, { label: 'Jobs', to: '/jobs' }, { label: job.roleType }]} />
+        <Link to="/jobs" className="text-xs font-semibold text-brand hover:text-brand-hover">
+          Back to jobs
+        </Link>
+      </div>
+      <div className="grid gap-6 lg:grid-cols-[1fr,300px]">
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-card">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-brand">{job.roleType}</p>
+                <h1 className="text-3xl font-bold text-gray-900">{job.clinicName}</h1>
+                <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-gray-700">
+                  <span className="inline-flex items-center gap-1">
+                    <Building2 className="h-4 w-4 text-brand" />
+                    {job.employmentType}
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <MapPin className="h-4 w-4 text-brand" />
+                    {job.city}, {job.country}
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-amber-700">
+                    <Star className="h-4 w-4" />
+                    {job.experienceLevel}
+                  </span>
+                  <span className="text-xs text-gray-500">Posted {timeAgo(job.postedAt)}</span>
+                </div>
+              </div>
+              <div className="flex flex-col items-end gap-2">
+                <Badge variant="default">{job.salaryRange}</Badge>
+                <div className="flex gap-2">
+                  {job.newGradWelcome && <Badge variant="info">New grad welcome</Badge>}
+                  {job.trainingProvided && <Badge variant="success">Training provided</Badge>}
+                </div>
+              </div>
+            </div>
+
+            <p className="mt-4 text-sm text-gray-700">{job.description}</p>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              {job.specialtyTags.map((tag) => (
+                <TagPill key={tag} label={tag} />
+              ))}
+            </div>
+
+            <div className="mt-5 grid gap-4 rounded-xl bg-gray-50 p-4 sm:grid-cols-2">
+              <div>
+                <p className="text-sm font-semibold text-gray-900">Requirements</p>
+                <ul className="mt-2 space-y-2 text-sm text-gray-700">
+                  {job.requirements.map((req) => (
+                    <li key={req} className="flex items-start gap-2">
+                      <ShieldCheck className="mt-0.5 h-4 w-4 text-brand" />
+                      {req}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-gray-900">Benefits</p>
+                <ul className="mt-2 space-y-2 text-sm text-gray-700">
+                  {job.benefits.map((b) => (
+                    <li key={b} className="flex items-center gap-2">
+                      <Wallet className="h-4 w-4 text-brand" />
+                      {b}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold text-gray-900">Similar jobs</h3>
+            <div className="grid gap-3">
+              {similarJobs.map((similar) => (
+                <Link
+                  key={similar.id}
+                  to={`/jobs/${similar.id}`}
+                  className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm transition hover:border-brand"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900">{similar.roleType}</p>
+                      <p className="text-xs text-gray-600">
+                        {similar.clinicName} - {similar.city}
+                      </p>
+                    </div>
+                    <Badge variant="outline">{similar.salaryRange}</Badge>
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {similar.specialtyTags.slice(0, 3).map((tag) => (
+                      <TagPill key={tag} label={tag} />
+                    ))}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div className="sticky top-24 rounded-2xl border border-gray-100 bg-white p-5 shadow-card">
+            <p className="text-sm font-semibold text-gray-900">Ready to apply?</p>
+            <p className="text-sm text-gray-600">Submit your resume with screening answers.</p>
+            <div className="mt-4 flex flex-col gap-2">
+              <Button
+                variant="primary"
+                rightIcon={<Sparkles className="h-4 w-4" />}
+                onClick={() => setShowApply(true)}
+              >
+                Quick apply
+              </Button>
+              <Button variant="outline">Save job</Button>
+              <Button variant="ghost" icon={<Share2 className="h-4 w-4" />}>
+                Share
+              </Button>
+            </div>
+          </div>
+          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+            <p className="text-sm font-semibold text-gray-900">About the clinic</p>
+            <p className="mt-2 text-sm text-gray-700">
+              {job.clinicName} is a multi-chair practice focused on digital workflows and patient experience. They value
+              calm, organized chairside support and offer structured onboarding for new hires.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <ApplyModal open={showApply} job={job as Job} onClose={() => setShowApply(false)} resumes={resumes} />
+    </AppShell>
+  );
+}
