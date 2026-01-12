@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { UploadCloud } from 'lucide-react';
 import { Modal } from './ui/modal';
 import { Button } from './ui/button';
@@ -6,6 +7,7 @@ import { Select } from './ui/select';
 import { Textarea } from './ui/textarea';
 import { Toast } from './ui/toast';
 import { Job, Resume } from '../lib/types';
+import { useAuth } from '../contexts/AuthContext';
 
 interface ApplyModalProps {
   open: boolean;
@@ -15,12 +17,28 @@ interface ApplyModalProps {
 }
 
 export function ApplyModal({ open, job, onClose, resumes }: ApplyModalProps) {
+  const { user, userRole } = useAuth();
+  const navigate = useNavigate();
   const [selectedResume, setSelectedResume] = useState<string>(resumes[0]?.id ?? '');
   const [uploadedFile, setUploadedFile] = useState<string>('');
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [showToast, setShowToast] = useState(false);
 
+  useEffect(() => {
+    // If modal opens but user is not authenticated or not a seeker, redirect to login
+    if (open && (!user || userRole !== 'seeker')) {
+      onClose();
+      navigate('/login?redirect=apply');
+    }
+  }, [open, user, userRole, navigate, onClose]);
+
   const handleSubmit = () => {
+    if (!user || userRole !== 'seeker') {
+      navigate('/login?redirect=apply');
+      onClose();
+      return;
+    }
+
     setShowToast(true);
     setTimeout(() => {
       setShowToast(false);
@@ -32,6 +50,11 @@ export function ApplyModal({ open, job, onClose, resumes }: ApplyModalProps) {
     setUploadedFile(fileName);
     setSelectedResume('');
   };
+
+  // Don't render modal if user is not authenticated
+  if (!user || userRole !== 'seeker') {
+    return null;
+  }
 
   return (
     <>

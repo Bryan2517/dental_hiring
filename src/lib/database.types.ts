@@ -1,0 +1,750 @@
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
+
+export type Database = {
+  public: {
+    Tables: {
+      application_events: {
+        Row: {
+          actor_user_id: string
+          application_id: string
+          created_at: string
+          event_type: string
+          id: string
+          payload: Json
+        }
+        Insert: {
+          actor_user_id: string
+          application_id: string
+          created_at?: string
+          event_type: string
+          id?: string
+          payload?: Json
+        }
+        Update: {
+          actor_user_id?: string
+          application_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          payload?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_events_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_events_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      applications: {
+        Row: {
+          cover_letter: string | null
+          created_at: string
+          employer_notes: string | null
+          id: string
+          job_id: string
+          org_id: string
+          resume_doc_id: string | null
+          screening_answers: Json
+          seeker_user_id: string
+          status: Database["public"]["Enums"]["application_status"]
+          updated_at: string
+        }
+        Insert: {
+          cover_letter?: string | null
+          created_at?: string
+          employer_notes?: string | null
+          id?: string
+          job_id: string
+          org_id: string
+          resume_doc_id?: string | null
+          screening_answers?: Json
+          seeker_user_id: string
+          status?: Database["public"]["Enums"]["application_status"]
+          updated_at?: string
+        }
+        Update: {
+          cover_letter?: string | null
+          created_at?: string
+          employer_notes?: string | null
+          id?: string
+          job_id?: string
+          org_id?: string
+          resume_doc_id?: string | null
+          screening_answers?: Json
+          seeker_user_id?: string
+          status?: Database["public"]["Enums"]["application_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "applications_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "applications_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "applications_resume_doc_id_fkey"
+            columns: ["resume_doc_id"]
+            isOneToOne: false
+            referencedRelation: "seeker_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "applications_seeker_user_id_fkey"
+            columns: ["seeker_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employer_wallets: {
+        Row: {
+          balance: number | null
+          created_at: string | null
+          earned_this_month: number | null
+          id: string
+          next_tier_in: number | null
+          spent_this_month: number | null
+          tier: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          balance?: number | null
+          created_at?: string | null
+          earned_this_month?: number | null
+          id?: string
+          next_tier_in?: number | null
+          spent_this_month?: number | null
+          tier?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          balance?: number | null
+          created_at?: string | null
+          earned_this_month?: number | null
+          id?: string
+          next_tier_in?: number | null
+          spent_this_month?: number | null
+          tier?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employer_wallets_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_saves: {
+        Row: {
+          created_at: string
+          id: string
+          job_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          job_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          job_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_saves_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_saves_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jobs: {
+        Row: {
+          benefits: Json
+          city: string | null
+          closed_at: string | null
+          country: string | null
+          created_at: string
+          currency: string | null
+          dental_requirements: Json
+          description: string
+          employment_type: Database["public"]["Enums"]["employment_type"]
+          experience_level: Database["public"]["Enums"]["experience_level"]
+          id: string
+          internship_available: boolean | null
+          new_grad_welcome: boolean
+          org_id: string
+          published_at: string | null
+          requirements: string | null
+          responsibilities: string | null
+          role_type: Database["public"]["Enums"]["role_type"]
+          salary_max: number | null
+          salary_min: number | null
+          shift_type: string | null
+          specialty_tags: string[]
+          status: Database["public"]["Enums"]["job_status"]
+          title: string
+          training_provided: boolean
+          updated_at: string
+        }
+        Insert: {
+          benefits?: Json
+          city?: string | null
+          closed_at?: string | null
+          country?: string | null
+          created_at?: string
+          currency?: string | null
+          dental_requirements?: Json
+          description: string
+          employment_type?: Database["public"]["Enums"]["employment_type"]
+          experience_level?: Database["public"]["Enums"]["experience_level"]
+          id?: string
+          internship_available?: boolean | null
+          new_grad_welcome?: boolean
+          org_id: string
+          published_at?: string | null
+          requirements?: string | null
+          responsibilities?: string | null
+          role_type?: Database["public"]["Enums"]["role_type"]
+          salary_max?: number | null
+          salary_min?: number | null
+          shift_type?: string | null
+          specialty_tags?: string[]
+          status?: Database["public"]["Enums"]["job_status"]
+          title: string
+          training_provided?: boolean
+          updated_at?: string
+        }
+        Update: {
+          benefits?: Json
+          city?: string | null
+          closed_at?: string | null
+          country?: string | null
+          created_at?: string
+          currency?: string | null
+          dental_requirements?: Json
+          description?: string
+          employment_type?: Database["public"]["Enums"]["employment_type"]
+          experience_level?: Database["public"]["Enums"]["experience_level"]
+          id?: string
+          internship_available?: boolean | null
+          new_grad_welcome?: boolean
+          org_id?: string
+          published_at?: string | null
+          requirements?: string | null
+          responsibilities?: string | null
+          role_type?: Database["public"]["Enums"]["role_type"]
+          salary_max?: number | null
+          salary_min?: number | null
+          shift_type?: string | null
+          specialty_tags?: string[]
+          status?: Database["public"]["Enums"]["job_status"]
+          title?: string
+          training_provided?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jobs_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_members: {
+        Row: {
+          created_at: string
+          id: string
+          invited_email: string | null
+          member_role: Database["public"]["Enums"]["org_member_role"]
+          org_id: string
+          status: Database["public"]["Enums"]["member_status"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          invited_email?: string | null
+          member_role?: Database["public"]["Enums"]["org_member_role"]
+          org_id: string
+          status?: Database["public"]["Enums"]["member_status"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          invited_email?: string | null
+          member_role?: Database["public"]["Enums"]["org_member_role"]
+          org_id?: string
+          status?: Database["public"]["Enums"]["member_status"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_members_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organizations: {
+        Row: {
+          address_line1: string | null
+          address_line2: string | null
+          city: string | null
+          country: string | null
+          created_at: string
+          description: string | null
+          id: string
+          org_name: string
+          org_type: Database["public"]["Enums"]["org_type"]
+          owner_user_id: string
+          postcode: string | null
+          state: string | null
+          updated_at: string
+          verified_status: Database["public"]["Enums"]["verified_status"]
+          website_url: string | null
+        }
+        Insert: {
+          address_line1?: string | null
+          address_line2?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          org_name: string
+          org_type?: Database["public"]["Enums"]["org_type"]
+          owner_user_id: string
+          postcode?: string | null
+          state?: string | null
+          updated_at?: string
+          verified_status?: Database["public"]["Enums"]["verified_status"]
+          website_url?: string | null
+        }
+        Update: {
+          address_line1?: string | null
+          address_line2?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          org_name?: string
+          org_type?: Database["public"]["Enums"]["org_type"]
+          owner_user_id?: string
+          postcode?: string | null
+          state?: string | null
+          updated_at?: string
+          verified_status?: Database["public"]["Enums"]["verified_status"]
+          website_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organizations_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          city: string | null
+          country: string | null
+          created_at: string
+          full_name: string | null
+          id: string
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          full_name?: string | null
+          id: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      seeker_documents: {
+        Row: {
+          created_at: string
+          doc_type: Database["public"]["Enums"]["doc_type"]
+          id: string
+          is_default: boolean
+          storage_path: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          doc_type?: Database["public"]["Enums"]["doc_type"]
+          id?: string
+          is_default?: boolean
+          storage_path: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          doc_type?: Database["public"]["Enums"]["doc_type"]
+          id?: string
+          is_default?: boolean
+          storage_path?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seeker_documents_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      seeker_profiles: {
+        Row: {
+          bio: string | null
+          created_at: string
+          education_level: string | null
+          expected_graduation_date: string | null
+          headline: string | null
+          license_status: string | null
+          preferred_locations: Json | null
+          primary_role: Database["public"]["Enums"]["role_type"]
+          program: string | null
+          school_name: string | null
+          seeker_type: Database["public"]["Enums"]["seeker_type"]
+          updated_at: string
+          user_id: string
+          years_experience: number | null
+        }
+        Insert: {
+          bio?: string | null
+          created_at?: string
+          education_level?: string | null
+          expected_graduation_date?: string | null
+          headline?: string | null
+          license_status?: string | null
+          preferred_locations?: Json | null
+          primary_role?: Database["public"]["Enums"]["role_type"]
+          program?: string | null
+          school_name?: string | null
+          seeker_type?: Database["public"]["Enums"]["seeker_type"]
+          updated_at?: string
+          user_id: string
+          years_experience?: number | null
+        }
+        Update: {
+          bio?: string | null
+          created_at?: string
+          education_level?: string | null
+          expected_graduation_date?: string | null
+          headline?: string | null
+          license_status?: string | null
+          preferred_locations?: Json | null
+          primary_role?: Database["public"]["Enums"]["role_type"]
+          program?: string | null
+          school_name?: string | null
+          seeker_type?: Database["public"]["Enums"]["seeker_type"]
+          updated_at?: string
+          user_id?: string
+          years_experience?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seeker_profiles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      seeker_skills: {
+        Row: {
+          id: string
+          level: string
+          skill_key: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          level?: string
+          skill_key: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          level?: string
+          skill_key?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seeker_skills_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      seeker_specialty_interests: {
+        Row: {
+          id: string
+          priority: number
+          specialty_tag: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          priority?: number
+          specialty_tag: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          priority?: number
+          specialty_tag?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seeker_specialty_interests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_aliases: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_aliases_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["user_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["user_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wallet_transactions: {
+        Row: {
+          amount: number
+          balance_after: number | null
+          created_at: string | null
+          description: string
+          id: string
+          type: string
+          wallet_id: string
+        }
+        Insert: {
+          amount: number
+          balance_after?: number | null
+          created_at?: string | null
+          description: string
+          id?: string
+          type: string
+          wallet_id: string
+        }
+        Update: {
+          amount?: number
+          balance_after?: number | null
+          created_at?: string | null
+          description?: string
+          id?: string
+          type?: string
+          wallet_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wallet_transactions_wallet_id_fkey"
+            columns: ["wallet_id"]
+            isOneToOne: false
+            referencedRelation: "employer_wallets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      is_admin: { Args: Record<PropertyKey, never>; Returns: boolean }
+      is_org_member: { Args: { p_org_id: string }; Returns: boolean }
+    }
+    Enums: {
+      application_status:
+        | "applied"
+        | "shortlisted"
+        | "interview"
+        | "offer"
+        | "hired"
+        | "rejected"
+        | "withdrawn"
+      doc_type:
+        | "resume"
+        | "certificate"
+        | "transcript"
+        | "recommendation"
+        | "license"
+        | "other"
+      employment_type:
+        | "full_time"
+        | "part_time"
+        | "internship"
+        | "contract"
+        | "temporary"
+      experience_level: "entry" | "junior" | "mid" | "senior"
+      job_status: "draft" | "published" | "paused" | "closed"
+      member_status: "active" | "invited" | "disabled"
+      org_member_role: "owner" | "hr" | "manager"
+      org_type: "clinic" | "lab" | "dental_group" | "supplier" | "other"
+      role_type:
+        | "dentist_gp"
+        | "dentist_specialist"
+        | "dental_assistant"
+        | "dental_nurse"
+        | "dental_hygienist"
+        | "dental_therapist"
+        | "receptionist"
+        | "treatment_coordinator"
+        | "lab_technician"
+        | "clinic_manager"
+        | "sterilization_technician"
+        | "other"
+      seeker_type: "student" | "fresh_grad" | "professional"
+      user_role: "seeker" | "employer" | "admin"
+      verified_status: "unverified" | "pending" | "verified" | "rejected"
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
+}

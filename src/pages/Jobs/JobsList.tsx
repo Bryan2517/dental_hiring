@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AppShell } from '../../layouts/AppShell';
-import { jobs as jobData, resumes } from '../../lib/mockData';
 import { Job } from '../../lib/types';
 import { JobCard } from '../../components/JobCard';
 import { JobFilters, JobFilterState } from '../../components/JobFilters';
 import { Pagination } from '../../components/Pagination';
 import { ApplyModal } from '../../components/ApplyModal';
 import { Breadcrumbs } from '../../components/Breadcrumbs';
+import { getJobs } from '../../lib/api/jobs';
+import { getUserDocuments } from '../../lib/api/profiles';
+import { useAuth } from '../../contexts/AuthContext';
 
 const defaultFilters: JobFilterState = {
   keyword: '',
@@ -22,14 +25,57 @@ const defaultFilters: JobFilterState = {
 };
 
 export default function JobsList() {
+  const { user, userRole } = useAuth();
+  const navigate = useNavigate();
   const [filters, setFilters] = useState<JobFilterState>(defaultFilters);
   const [sortBy, setSortBy] = useState('relevance');
   const [page, setPage] = useState(1);
   const [selectedJob, setSelectedJob] = useState<Job | undefined>();
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [resumes, setResumes] = useState<any[]>([]);
   const pageSize = 6;
 
+  const handleApplyClick = (job: Job) => {
+    if (!user || userRole !== 'seeker') {
+      navigate(`/login?redirect=/jobs/${job.id}`);
+    } else {
+      setSelectedJob(job);
+    }
+  };
+
+  useEffect(() => {
+    async function loadJobs() {
+      try {
+        setLoading(true);
+        const jobsData = await getJobs({ status: 'published' });
+        setJobs(jobsData);
+      } catch (error) {
+        console.error('Error loading jobs:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadJobs();
+  }, []);
+
+  useEffect(() => {
+    async function loadResumes() {
+      try {
+        // TODO: Get current user ID from auth context
+        // For now, we'll use empty array
+        // const userId = 'current-user-id';
+        // const docs = await getUserDocuments(userId);
+        // setResumes(docs);
+      } catch (error) {
+        console.error('Error loading resumes:', error);
+      }
+    }
+    loadResumes();
+  }, []);
+
   const filteredJobs = useMemo(() => {
-    let result = jobData.filter((job) => {
+    let result = jobs.filter((job) => {
       const matchesKeyword =
         filters.keyword === '' ||
         job.roleType.toLowerCase().includes(filters.keyword.toLowerCase()) ||
@@ -79,7 +125,7 @@ export default function JobsList() {
     }
 
     return result;
-  }, [filters, sortBy]);
+  }, [jobs, filters, sortBy]);
 
   const totalPages = Math.max(1, Math.ceil(filteredJobs.length / pageSize));
   const pageJobs = filteredJobs.slice((page - 1) * pageSize, page * pageSize);
@@ -104,7 +150,7 @@ export default function JobsList() {
             <p className="text-sm font-semibold text-brand">Job Board</p>
             <h1 className="text-2xl font-bold text-gray-900">Find your next dental role</h1>
             <p className="text-sm text-gray-600">
-              {filteredJobs.length} jobs - filters update instantly (mock data)
+              {loading ? 'Loading jobs...' : `${filteredJobs.length} jobs - filters update instantly`}
             </p>
           </div>
         </div>
@@ -118,13 +164,21 @@ export default function JobsList() {
         />
 
         <div className="grid gap-4">
-          {pageJobs.map((job) => (
-            <JobCard key={job.id} job={job} onApply={setSelectedJob} />
-          ))}
-          {pageJobs.length === 0 && (
+          {loading ? (
             <div className="rounded-2xl border border-dashed border-gray-200 bg-white p-6 text-center text-sm text-gray-600">
-              No jobs match these filters. Try clearing some options.
+              Loading jobs...
             </div>
+          ) : (
+            <>
+              {pageJobs.map((job) => (
+                <JobCard key={job.id} job={job} onApply={handleApplyClick} />
+              ))}
+              {pageJobs.length === 0 && (
+                <div className="rounded-2xl border border-dashed border-gray-200 bg-white p-6 text-center text-sm text-gray-600">
+                  No jobs match these filters. Try clearing some options.
+                </div>
+              )}
+            </>
           )}
         </div>
 

@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { AppShell } from '../../layouts/AppShell';
-import { jobs, resumes } from '../../lib/mockData';
 import { Badge } from '../../components/ui/badge';
 import { TagPill } from '../../components/TagPill';
 import { Button } from '../../components/ui/button';
@@ -10,16 +9,72 @@ import { Building2, MapPin, Share2, ShieldCheck, Sparkles, Star, Wallet } from '
 import { Job } from '../../lib/types';
 import { timeAgo } from '../../lib/utils';
 import { Breadcrumbs } from '../../components/Breadcrumbs';
+import { getJobById, getJobs } from '../../lib/api/jobs';
+import { getUserDocuments } from '../../lib/api/profiles';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function JobDetails() {
   const { id } = useParams<{ id: string }>();
-  const job = useMemo(() => jobs.find((j) => j.id === id), [id]);
+  const { user, userRole } = useAuth();
+  const navigate = useNavigate();
+  const [job, setJob] = useState<Job | null>(null);
+  const [similarJobs, setSimilarJobs] = useState<Job[]>([]);
+  const [resumes, setResumes] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showApply, setShowApply] = useState(false);
+
+  useEffect(() => {
+    async function loadJob() {
+      if (!id) return;
+      try {
+        setLoading(true);
+        const jobData = await getJobById(id);
+        setJob(jobData);
+        
+        if (jobData) {
+          // Load similar jobs (same specialty tags)
+          const allJobs = await getJobs({ status: 'published' });
+          const similar = allJobs
+            .filter((j) => j.id !== jobData.id && j.specialtyTags.some((tag) => jobData.specialtyTags.includes(tag)))
+            .slice(0, 3);
+          setSimilarJobs(similar);
+        }
+      } catch (error) {
+        console.error('Error loading job:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadJob();
+  }, [id]);
+
+  useEffect(() => {
+    async function loadResumes() {
+      try {
+        // TODO: Get current user ID from auth context
+        // const userId = 'current-user-id';
+        // const docs = await getUserDocuments(userId);
+        // setResumes(docs);
+      } catch (error) {
+        console.error('Error loading resumes:', error);
+      }
+    }
+    loadResumes();
+  }, []);
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0 });
   }, [id]);
-  const [showApply, setShowApply] = useState(false);
-  const navigate = useNavigate();
+
+  if (loading) {
+    return (
+      <AppShell>
+        <div className="rounded-2xl border border-dashed border-gray-200 bg-white p-6 text-center">
+          <p className="text-lg font-semibold text-gray-900">Loading job...</p>
+        </div>
+      </AppShell>
+    );
+  }
 
   if (!job) {
     return (
@@ -34,8 +89,6 @@ export default function JobDetails() {
       </AppShell>
     );
   }
-
-  const similarJobs = jobs.filter((j) => j.id !== job.id && j.specialtyTags.some((tag) => job.specialtyTags.includes(tag))).slice(0, 3);
 
   return (
     <AppShell padded background="muted">
@@ -148,7 +201,13 @@ export default function JobDetails() {
               <Button
                 variant="primary"
                 rightIcon={<Sparkles className="h-4 w-4" />}
-                onClick={() => setShowApply(true)}
+                onClick={() => {
+                  if (!user || userRole !== 'seeker') {
+                    navigate('/login?redirect=' + encodeURIComponent(`/jobs/${id}`));
+                  } else {
+                    setShowApply(true);
+                  }
+                }}
               >
                 Quick apply
               </Button>
