@@ -1,8 +1,10 @@
 import { ReactNode, useMemo } from 'react';
-import { Link, NavLink, useLocation } from 'react-router-dom';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Briefcase, LayoutDashboard, User2, Wallet } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Role } from './RoleSwitch';
+import { Button } from './ui/button';
+import { useAuth } from '../contexts/AuthContext';
 
 export function TopNav() {
   const location = useLocation();
@@ -33,6 +35,14 @@ export function TopNav() {
     ];
   }, [activeRole]);
 
+  const { signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/login', { replace: true });
+  };
+
   return (
     <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-white/40 shadow-sm">
       <div className="container-wide flex items-center justify-between py-4">
@@ -61,20 +71,30 @@ export function TopNav() {
             </Link>
           )}
           {activeRole === 'employer' ? (
-            <Link
-              to="/employer/post-job"
-              className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-brand to-brand-hover px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:-translate-y-0.5"
-            >
-              Post a Job
-            </Link>
+            <>
+              <Button variant="ghost" size="sm" onClick={handleSignOut}>
+                Sign out
+              </Button>
+              <Link
+                to="/employer/post-job"
+                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-brand to-brand-hover px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:-translate-y-0.5"
+              >
+                Post a Job
+              </Link>
+            </>
           ) : (
-            <Link
-              to="/jobs"
-              className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-brand to-brand-hover px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:-translate-y-0.5"
-            >
-              <Briefcase className="h-4 w-4" />
-              Browse Jobs
-            </Link>
+            <>
+              <Button variant="ghost" size="sm" onClick={handleSignOut}>
+                Sign out
+              </Button>
+              <Link
+                to="/jobs"
+                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-brand to-brand-hover px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:-translate-y-0.5"
+              >
+                <Briefcase className="h-4 w-4" />
+                Browse Jobs
+              </Link>
+            </>
           )}
         </div>
       </div>

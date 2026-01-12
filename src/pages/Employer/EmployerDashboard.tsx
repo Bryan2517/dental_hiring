@@ -17,6 +17,7 @@ const sidebarLinks = [
 const pipelineStages: JobStage[] = ['Applied', 'Shortlisted', 'Interview', 'Offer', 'Hired', 'Rejected'];
 
 export default function EmployerDashboard() {
+
   const activeJobs = jobs.slice(0, 5);
   const stageCounts = pipelineStages.map((stage) => ({
     stage,

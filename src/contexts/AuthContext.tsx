@@ -25,49 +25,85 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [userRole, setUserRole] = useState<UserRole | null>(null);
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        loadUserRole(session.user.id);
-      } else {
-        setLoading(false);
-      }
-    });
+    let isMounted = true;
 
-    // Listen for auth changes
+    const handleSessionUpdate = async (sessionData: Session | null) => {
+      if (!isMounted) return;
+
+      setSession(sessionData);
+      setUser(sessionData?.user ?? null);
+
+      try {
+        if (sessionData?.user) {
+          const metadataRole = sessionData.user.user_metadata?.role as UserRole | undefined;
+          if (metadataRole) {
+            setUserRole(metadataRole);
+          } else {
+            const loadedRole = await loadUserRole(sessionData.user.id);
+            if (isMounted) {
+              setUserRole(loadedRole);
+            }
+          }
+        } else {
+          setUserRole(null);
+        }
+      } catch (error) {
+        console.error('Error handling auth state change:', error);
+        if (isMounted) {
+          setUserRole(null);
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    async function initializeSession() {
+      try {
+        const {
+          data: { session: initialSession },
+        } = await supabase.auth.getSession();
+        await handleSessionUpdate(initialSession);
+      } catch (error) {
+        console.error('Error initializing auth session:', error);
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    initializeSession();
+
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        await loadUserRole(session.user.id);
-      } else {
-        setUserRole(null);
-      }
-      setLoading(false);
+    } = supabase.auth.onAuthStateChange(async (_event, sessionData) => {
+      await handleSessionUpdate(sessionData);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
-  async function loadUserRole(userId: string) {
+  async function loadUserRole(userId: string): Promise<UserRole | null> {
     try {
       const { data, error } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
 
-      if (!error && data) {
-        setUserRole(data.role);
+      if (error) {
+        console.error('Error loading user role:', error);
+        return null;
       }
-      setLoading(false);
+
+      return data?.role ?? null;
     } catch (error) {
       console.error('Error loading user role:', error);
-      setLoading(false);
+      return null;
     }
   }
 
@@ -79,14 +115,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     metadata?: Record<string, any>
   ) {
     try {
-      // Sign up the user
+      const authMetadata = {
+        ...(metadata ?? {}),
+        role,
+      };
+
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
             full_name: fullName,
-            ...metadata,
+            ...authMetadata,
           },
         },
       });
@@ -96,7 +136,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (authData.user) {
-        // Use upsert to create or update profile (handles case where trigger creates it)
         const phone = metadata?.phone || null;
         const { error: profileError } = await supabase
           .from('profiles')
@@ -116,7 +155,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return { error: profileError as any };
         }
 
-        // Create user role
         const { error: roleError } = await supabase.from('user_roles').insert({
           user_id: authData.user.id,
           role,
@@ -127,7 +165,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return { error: roleError as any };
         }
 
-        // If seeker, create seeker profile
         if (role === 'seeker' && metadata?.seekerData) {
           const { error: seekerError } = await supabase.from('seeker_profiles').insert({
             user_id: authData.user.id,
@@ -142,7 +179,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         }
 
-        // If employer, create organization
         if (role === 'employer' && metadata?.employerData) {
           const { error: orgError } = await supabase.from('organizations').insert({
             owner_user_id: authData.user.id,
