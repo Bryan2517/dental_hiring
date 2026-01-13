@@ -1,14 +1,17 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { AppShell } from '../../layouts/AppShell';
-import { jobs, resumes } from '../../lib/mockData';
+import { resumes } from '../../lib/mockData';
 import { JobCard } from '../../components/JobCard';
 import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { TagPill } from '../../components/TagPill';
 import { ArrowRight, CheckCircle2, Sparkles } from 'lucide-react';
 import { ApplyModal } from '../../components/ApplyModal';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Job } from '../../lib/types';
+import { getJobs } from '../../lib/api/jobs';
+import { supabase } from '../../lib/supabase';
+import { TrendingUp, Building2, MapPin, Users } from 'lucide-react'; // Ensure specific icons are used if needed, or keep generic
 
 const steps = [
   { title: 'Create your profile', desc: 'Highlight clinical exposure, rotations, and preferred specialties.' },
@@ -37,8 +40,41 @@ const heroStats = [
 ];
 
 export default function SeekersLanding() {
-  const featured = jobs.slice(0, 3);
+  const [hotJobs, setHotJobs] = useState<Job[]>([]);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    async function fetchHotRoles() {
+      try {
+        setLoading(true);
+        // 1. Get app counts
+        const { data: apps } = await supabase.from('applications').select('job_id');
+        const counts: Record<string, number> = {};
+        apps?.forEach((a) => {
+          counts[a.job_id] = (counts[a.job_id] || 0) + 1;
+        });
+
+        // 2. Get all published jobs
+        const allJobs = await getJobs({ status: 'published' });
+
+        // 3. Sort by popularity (app count)
+        const sorted = allJobs.sort((a, b) => {
+          const countA = counts[a.id] || 0;
+          const countB = counts[b.id] || 0;
+          return countB - countA;
+        });
+
+        // 4. Take top 3
+        setHotJobs(sorted.slice(0, 3));
+      } catch (err) {
+        console.error('Error loading hot roles', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchHotRoles();
+  }, []);
   const [selectedJob, setSelectedJob] = useState<Job | undefined>();
   const [showApply, setShowApply] = useState(false);
 
@@ -85,15 +121,25 @@ export default function SeekersLanding() {
             <Card className="p-6">
               <p className="text-sm font-semibold text-gray-900">Featured openings</p>
               <div className="mt-4 space-y-3">
-                {featured.map((job) => (
-                  <div key={job.id} className="flex items-center justify-between rounded-xl bg-gray-50 px-4 py-3">
-                    <div>
-                      <p className="text-sm font-semibold text-gray-900">{job.roleType}</p>
-                      <p className="text-xs text-gray-500">{job.clinicName}</p>
+                {loading ? (
+                  <p className="text-xs text-gray-500">Loading...</p>
+                ) : hotJobs.length === 0 ? (
+                  <p className="text-xs text-gray-500">No active jobs yet.</p>
+                ) : (
+                  hotJobs.map((job) => (
+                    <div
+                      key={job.id}
+                      className="flex items-center justify-between rounded-xl bg-gray-50 px-4 py-3 cursor-pointer hover:bg-gray-100 transition"
+                      onClick={() => navigate(`/jobs/${job.id}`)}
+                    >
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900">{job.roleType}</p>
+                        <p className="text-xs text-gray-500">{job.clinicName}</p>
+                      </div>
+                      <span className="text-xs font-semibold text-brand">{job.city}</span>
                     </div>
-                    <span className="text-xs font-semibold text-brand">{job.city}</span>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </Card>
             <Card className="p-6">
@@ -121,9 +167,17 @@ export default function SeekersLanding() {
           </Link>
         </div>
         <div className="grid gap-4">
-          {featured.map((job) => (
-            <JobCard key={job.id} job={job} onApply={setSelectedJob} />
-          ))}
+          {loading ? (
+            <div className="py-10 text-center text-gray-500">Loading hot roles...</div>
+          ) : hotJobs.length === 0 ? (
+            <div className="py-10 text-center text-gray-500">
+              No jobs found. Be the first to apply!
+            </div>
+          ) : (
+            hotJobs.map((job) => (
+              <JobCard key={job.id} job={job} onApply={setSelectedJob} />
+            ))
+          )}
         </div>
         <div className="flex justify-center">
           <Button variant="outline" asChild>

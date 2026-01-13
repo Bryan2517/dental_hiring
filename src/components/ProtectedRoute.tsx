@@ -15,17 +15,6 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
   const { user, loading, userRole, session, openAuthModal } = useAuth();
   const location = useLocation();
 
-  if (session === null) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <div className="text-lg font-semibold text-gray-900">Please Sign In...</div>
-          <div className="text-sm text-gray-600 mt-1">or Sign UP</div>
-        </div>
-      </div>
-    );
-  }
-
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -37,7 +26,7 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
     );
   }
 
-  if (!user) {
+  if (session === null && !user) {
     return (
       <div className="flex min-h-screen items-center justify-center px-4">
         <div className="max-w-md rounded-2xl border border-gray-100 bg-white p-6 text-center shadow-sm">

@@ -23,7 +23,7 @@ function App() {
         <Route path="/jobs" element={<JobsList />} />
         <Route path="/jobs/:id" element={<JobDetails />} />
         {/* Login and register flows are now handled via modal triggered from the header */}
-        <Route path="/student/profile" element={<ProtectedRoute><ProfileDashboard /></ProtectedRoute>} />
+        <Route path="/student/profile" element={<ProtectedRoute requiredRole="seeker"><ProfileDashboard /></ProtectedRoute>} />
         <Route
           path="/employer/dashboard"
           element={

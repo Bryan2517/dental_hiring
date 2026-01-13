@@ -21,6 +21,9 @@ export function AuthModal() {
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [role, setRole] = useState<'seeker' | 'employer'>('seeker');
+  // Employer specific fields
+  const [clinicName, setClinicName] = useState('');
+  const [city, setCity] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,6 +33,8 @@ export function AuthModal() {
       setPassword('');
       setFullName('');
       setRole('seeker');
+      setClinicName('');
+      setCity('');
       setError(null);
       setLoading(false);
     }
@@ -39,7 +44,7 @@ export function AuthModal() {
     closeAuthModal();
   };
 
-  const goToDefault = (userRole: 'seeker' | 'employer' | null) => {
+  const goToDefault = (userRole: string | null) => {
     const fallback = userRole === 'employer' ? '/employers' : '/seekers';
     const redirectPath = authModalRedirectPath ?? fallback;
     navigate(redirectPath);
@@ -67,7 +72,15 @@ export function AuthModal() {
     setLoading(true);
     setError(null);
 
-    const { error: authError } = await signUp(email, password, fullName, role);
+    const metadata: Record<string, any> = {};
+    if (role === 'employer') {
+      metadata.employerData = {
+        clinicName,
+        city
+      };
+    }
+
+    const { error: authError } = await signUp(email, password, fullName, role, metadata);
     if (authError) {
       setError(authError.message);
       setLoading(false);
@@ -84,22 +97,20 @@ export function AuthModal() {
         <div className="flex gap-2">
           <button
             type="button"
-            className={`flex-1 rounded-full px-4 py-2 text-sm font-semibold transition ${
-              authModalMode === 'login'
-                ? 'bg-brand text-white'
-                : 'border border-gray-200 bg-white text-gray-700 hover:border-brand hover:text-brand'
-            }`}
+            className={`flex-1 rounded-full px-4 py-2 text-sm font-semibold transition ${authModalMode === 'login'
+              ? 'bg-brand text-white'
+              : 'border border-gray-200 bg-white text-gray-700 hover:border-brand hover:text-brand'
+              }`}
             onClick={() => openAuthModal('login', authModalRedirectPath)}
           >
             Sign in
           </button>
           <button
             type="button"
-            className={`flex-1 rounded-full px-4 py-2 text-sm font-semibold transition ${
-              authModalMode === 'register'
-                ? 'bg-brand text-white'
-                : 'border border-gray-200 bg-white text-gray-700 hover:border-brand hover:text-brand'
-            }`}
+            className={`flex-1 rounded-full px-4 py-2 text-sm font-semibold transition ${authModalMode === 'register'
+              ? 'bg-brand text-white'
+              : 'border border-gray-200 bg-white text-gray-700 hover:border-brand hover:text-brand'
+              }`}
             onClick={() => openAuthModal('register', authModalRedirectPath)}
           >
             Sign up
@@ -131,28 +142,45 @@ export function AuthModal() {
             onChange={(event) => setPassword(event.target.value)}
             required
           />
+          {authModalMode === 'register' && role === 'employer' && (
+            <>
+              <Input
+                label="Clinic Name"
+                placeholder="e.g. Bright Smile Dental"
+                value={clinicName}
+                onChange={(event) => setClinicName(event.target.value)}
+                required
+              />
+              <Input
+                label="City"
+                placeholder="e.g. Kuala Lumpur"
+                value={city}
+                onChange={(event) => setCity(event.target.value)}
+                required
+              />
+            </>
+          )}
+
           {authModalMode === 'register' && (
             <div>
               <label className="text-sm font-semibold text-gray-700">Role</label>
               <div className="mt-2 flex gap-2">
                 <button
                   type="button"
-                  className={`flex-1 rounded-full px-4 py-2 text-sm font-semibold transition ${
-                    role === 'seeker'
-                      ? 'bg-brand text-white'
-                      : 'border border-gray-200 bg-white text-gray-700 hover:border-brand hover:text-brand'
-                  }`}
+                  className={`flex-1 rounded-full px-4 py-2 text-sm font-semibold transition ${role === 'seeker'
+                    ? 'bg-brand text-white'
+                    : 'border border-gray-200 bg-white text-gray-700 hover:border-brand hover:text-brand'
+                    }`}
                   onClick={() => setRole('seeker')}
                 >
                   Seeker
                 </button>
                 <button
                   type="button"
-                  className={`flex-1 rounded-full px-4 py-2 text-sm font-semibold transition ${
-                    role === 'employer'
-                      ? 'bg-brand text-white'
-                      : 'border border-gray-200 bg-white text-gray-700 hover:border-brand hover:text-brand'
-                  }`}
+                  className={`flex-1 rounded-full px-4 py-2 text-sm font-semibold transition ${role === 'employer'
+                    ? 'bg-brand text-white'
+                    : 'border border-gray-200 bg-white text-gray-700 hover:border-brand hover:text-brand'
+                    }`}
                   onClick={() => setRole('employer')}
                 >
                   Employer

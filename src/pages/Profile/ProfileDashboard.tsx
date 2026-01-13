@@ -1,9 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { DashboardShell } from '../../layouts/DashboardShell';
-import { applications, jobs, resumes as resumeData } from '../../lib/mockData';
 import { Tabs } from '../../components/ui/tabs';
 import { Input } from '../../components/ui/input';
+import { Select } from '../../components/ui/select';
 import { Checkbox } from '../../components/ui/checkbox';
 import { Badge } from '../../components/ui/badge';
 import { TagPill } from '../../components/TagPill';
@@ -12,6 +12,9 @@ import { JobStage, Resume } from '../../lib/types';
 import { formatDate } from '../../lib/utils';
 import { Breadcrumbs } from '../../components/Breadcrumbs';
 import { UploadCloud } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabase';
+import { Database } from '../../lib/database.types';
 
 const sidebarLinks = [
   { to: '/student/profile', label: 'Profile' },
@@ -23,56 +26,103 @@ const exposures = ['4-hand dentistry', 'Sterilization', 'Intraoral scanning', 'I
 const applicationStatuses: (JobStage | 'All')[] = ['All', 'Applied', 'Shortlisted', 'Interview', 'Offer', 'Hired', 'Rejected'];
 
 const defaultProfileFields = {
-  fullName: 'Amira Rahman',
-  email: 'amira@uni.edu',
-  school: 'Mahsa University',
-  graduation: '2025-05'
+  fullName: '',
+  email: '',
+  school: '',
+  graduation: '',
+  seekerType: 'student',
 };
 
-function mockScanResume(resume?: Resume | null) {
-  const name = resume?.name?.toLowerCase() ?? '';
-  if (name.includes('amira')) {
-    return {
-      ...defaultProfileFields,
-      email: 'amira.s.dental@uni.edu',
-      graduation: '2025-05',
-      exposures: exposures.slice(0, 3)
-    };
-  }
-  if (name.includes('arai')) {
-    return {
-      fullName: 'Arai Gomez',
-      email: 'arai@mentordental.com',
-      school: 'Universiti Malaya',
-      graduation: '2024-11',
-      exposures: exposures.slice(2)
-    };
-  }
-  return {
-    fullName: 'Zara Ong',
-    email: 'zaraong@dentalcare.id',
-    school: "Taylor's University",
-    graduation: '2026-02',
-    exposures: exposures.slice(1, 4)
-  };
-}
-
 export default function ProfileDashboard() {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('profile');
-  const [resumes, setResumes] = useState<Resume[]>(resumeData.slice(0, 1));
-  const [latestResume, setLatestResume] = useState<Resume | null>(resumeData[0] ?? null);
+
+  // Real Data State
+  const [loading, setLoading] = useState(true);
+  const [resumes, setResumes] = useState<Resume[]>([]);
+  const [latestResume, setLatestResume] = useState<Resume | null>(null);
   const [profileFields, setProfileFields] = useState(defaultProfileFields);
-  const [selectedExposures, setSelectedExposures] = useState<string[]>(exposures.slice(0, 3));
+  const [selectedExposures, setSelectedExposures] = useState<string[]>([]);
+
+  // Modals & Upload
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadFileName, setUploadFileName] = useState('');
+  const [uploading, setUploading] = useState(false);
+
+  // Applications & Saved Jobs (We'll keep these mostly empty/basic for now unless we have real data populated)
+  const [applications, setApplications] = useState<any[]>([]);
+  const [savedJobs, setSavedJobs] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    async function fetchData() {
+      setLoading(true);
+      try {
+        // 1. Fetch Profile Data (profiles + seeker_profiles)
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('full_name, seeker_profiles(school_name, expected_graduation_date, clinical_exposures, seeker_type)')
+          .eq('id', user!.id)
+          .single();
+
+        if (profileError) {
+          console.error('Error fetching profile:', profileError);
+        } else if (profileData) {
+          // Cast to any to safely handle the joined data structure
+          const data = profileData as any;
+          const seeker = data.seeker_profiles?.[0] || data.seeker_profiles || {};
+
+          // Safe check for array vs object
+          const seekerDetails = Array.isArray(seeker) ? seeker[0] : seeker;
+
+          setProfileFields({
+            fullName: data.full_name || '',
+            email: user!.email || '', // auth email is reliable source
+            school: seekerDetails?.school_name || '',
+            graduation: seekerDetails?.expected_graduation_date ? seekerDetails.expected_graduation_date.substring(0, 7) : '',
+            seekerType: seekerDetails?.seeker_type || 'student',
+          });
+          setSelectedExposures(seekerDetails?.clinical_exposures || []);
+        }
+
+        // 2. Fetch Resumes (seeker_documents)
+        // Order by created_at DESC to get latest
+        const { data: docs, error: docsError } = await supabase
+          .from('seeker_documents')
+          .select('id, title, created_at, storage_path')
+          .eq('user_id', user!.id)
+          .eq('doc_type', 'resume')
+          .order('created_at', { ascending: false });
+
+        if (docsError) {
+          console.error('Error fetching documents:', docsError);
+        } else if (docs) {
+          // Map to Resume type
+          const mappedResumes: Resume[] = docs.map(d => ({
+            id: d.id,
+            name: d.title,
+            uploadedAt: d.created_at,
+            category: 'Resume',
+            url: d.storage_path // Or construct full URL if needed
+          }));
+          setResumes(mappedResumes);
+          setLatestResume(mappedResumes[0] || null);
+        }
+
+      } catch (err) {
+        console.error('Unexpected error fetching dashboard data:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchData();
+  }, [user]);
 
   const handleFieldChange = (field: keyof typeof defaultProfileFields, value: string) => {
     setProfileFields((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleResumeAdd = (resume: Resume) => {
-    setResumes([resume]);
-    setLatestResume(resume);
   };
 
   const toggleExposure = (item: string) => {
@@ -81,33 +131,95 @@ export default function ProfileDashboard() {
     );
   };
 
-  const applyResumeScan = (resume: Resume | null) => {
-    const scan = mockScanResume(resume);
-    setProfileFields({
-      fullName: scan.fullName,
-      email: scan.email,
-      school: scan.school,
-      graduation: scan.graduation
-    });
-    setSelectedExposures(scan.exposures);
+  const handleSaveProfile = async () => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      // Update 'profiles' table (full_name)
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ full_name: profileFields.fullName })
+        .eq('id', user.id);
+
+      if (profileError) throw profileError;
+
+      // Update 'seeker_profiles' table
+      // Use upsert to create the row if it doesn't exist
+      const { error: seekerError } = await supabase
+        .from('seeker_profiles')
+        .upsert({
+          user_id: user.id,
+          school_name: profileFields.school,
+          expected_graduation_date: profileFields.graduation ? `${profileFields.graduation}-01` : null, // Convert YYYY-MM to YYYY-MM-DD
+          clinical_exposures: selectedExposures,
+          seeker_type: profileFields.seekerType as Database['public']['Enums']['seeker_type']
+        });
+
+      // Note: upsert requires the primary key (user_id) to be present to determine update vs insert.
+      // We included user_id above.
+
+      if (seekerError) throw seekerError;
+
+      alert('Profile saved successfully!');
+    } catch (err) {
+      console.error('Error saving profile:', err);
+      alert('Failed to save profile.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleResumeUpload = (resume: Resume) => {
-    handleResumeAdd(resume);
-    applyResumeScan(resume);
-  };
+  const handleResumeUpload = async () => {
+    if (!uploadFile || !user) return;
 
-  const handleModalSave = () => {
-    if (!uploadFileName) return;
-    const resume: Resume = {
-      id: `res-${Date.now()}`,
-      name: uploadFileName,
-      uploadedAt: new Date().toISOString().slice(0, 10),
-      category: 'Resume'
-    };
-    handleResumeUpload(resume);
-    setShowUploadModal(false);
-    setUploadFileName('');
+    setUploading(true);
+    try {
+      const fileExt = uploadFile.name.split('.').pop();
+      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      // 1. Upload to Storage
+      const { error: uploadError } = await supabase.storage
+        .from('resumes')
+        .upload(filePath, uploadFile);
+
+      if (uploadError) throw uploadError;
+
+      // 2. Create DB Record
+      const { error: dbError } = await supabase
+        .from('seeker_documents')
+        .insert({
+          user_id: user.id,
+          title: uploadFileName || uploadFile.name,
+          doc_type: 'resume',
+          storage_path: filePath,
+          is_default: true // Mark as default/latest
+        });
+
+      if (dbError) throw dbError;
+
+      // 3. Refresh List
+      const newResume: Resume = {
+        id: 'temp-id', // will be refreshed on reload/fetch
+        name: uploadFileName || uploadFile.name,
+        uploadedAt: new Date().toISOString(),
+        category: 'Resume',
+        url: filePath
+      };
+
+      setResumes([newResume, ...resumes]); // Add to top
+      setLatestResume(newResume);
+
+      setShowUploadModal(false);
+      setUploadFile(null);
+      setUploadFileName('');
+
+    } catch (err) {
+      console.error('Error uploading resume:', err);
+      alert('Failed to upload resume.');
+    } finally {
+      setUploading(false);
+    }
   };
 
   const [applicationFilter, setApplicationFilter] = useState<JobStage | 'All'>('All');
@@ -115,13 +227,24 @@ export default function ProfileDashboard() {
   const filteredApplications = useMemo(() => {
     if (applicationFilter === 'All') return applications;
     return applications.filter((application) => application.status === applicationFilter);
-  }, [applicationFilter]);
+  }, [applicationFilter, applications]);
+
+  if (loading && !profileFields.email) {
+    return (
+      <DashboardShell sidebarLinks={sidebarLinks} title="Student Dashboard" subtitle="Loading..." hideNavigation>
+        <div className="flex h-64 items-center justify-center">
+          <p className="text-gray-500">Loading profile data...</p>
+        </div>
+      </DashboardShell>
+    );
+  }
 
   return (
     <DashboardShell
       sidebarLinks={sidebarLinks}
       title="Student Dashboard"
       subtitle="Manage your dental profile, resumes, and saved jobs."
+      hideNavigation
     >
       <Breadcrumbs items={[{ label: 'Seeker Home', to: '/seekers' }, { label: 'Student Dashboard' }]} />
       <Tabs
@@ -138,8 +261,8 @@ export default function ProfileDashboard() {
         <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm space-y-6">
           <div className="rounded-2xl border border-dashed border-black bg-white p-4 shadow-sm">
             <div>
-              <p className="text-lg font-semibold text-gray-900">Upload a resume (mock)</p>
-              <p className="text-sm text-gray-500">Simulated upload; file stored in local state only.</p>
+              <p className="text-lg font-semibold text-gray-900">Upload a resume</p>
+              <p className="text-sm text-gray-500">Upload your latest resume to be visible to employers.</p>
               <p className="text-xs text-gray-400">
                 Latest resume:{' '}
                 {latestResume ? (
@@ -180,11 +303,23 @@ export default function ProfileDashboard() {
               label="Email"
               type="email"
               value={profileFields.email}
+              disabled // Email usually can't be changed easily
+              className="bg-gray-50"
               onChange={(event) => handleFieldChange('email', event.target.value)}
             />
+            <Select
+              label="I am a..."
+              value={profileFields.seekerType}
+              onChange={(event) => handleFieldChange('seekerType', event.target.value)}
+            >
+              <option value="student">Student</option>
+              <option value="fresh_grad">Fresh Graduate</option>
+              <option value="professional">Professional</option>
+            </Select>
             <Input
               label="School"
               value={profileFields.school}
+              placeholder="e.g. Mahsa University"
               onChange={(event) => handleFieldChange('school', event.target.value)}
             />
             <Input
@@ -197,7 +332,7 @@ export default function ProfileDashboard() {
               <div>
                 <p className="text-sm font-semibold text-gray-800">Clinical exposure</p>
                 <p className="text-xs text-gray-500">
-                  Toggle the skills that best describe your resume.
+                  Select the skills you have experience with.
                 </p>
               </div>
               <div className="mt-2 grid gap-2 sm:grid-cols-2">
@@ -212,8 +347,9 @@ export default function ProfileDashboard() {
               </div>
             </div>
             <div className="md:col-span-2 flex items-center gap-2">
-              <Button variant="primary">Save profile (mock)</Button>
-              <Badge variant="info">UI only</Badge>
+              <Button variant="primary" onClick={handleSaveProfile} disabled={loading}>
+                {loading ? 'Saving...' : 'Save Profile'}
+              </Button>
             </div>
           </div>
         </div>
@@ -242,28 +378,13 @@ export default function ProfileDashboard() {
             </div>
           </div>
           <div className="grid gap-3">
-            {filteredApplications.map((app) => {
-              const job = jobs.find((j) => j.id === app.jobId);
-              if (!job) {
-                return null;
-              }
-              return (
-                <Link
-                  key={app.id}
-                  to={`/jobs/${job.id}`}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-100 bg-gray-50 p-4 transition hover:border-brand"
-                >
-                  <div>
-                    <p className="font-semibold text-gray-900">{job.roleType}</p>
-                    <p className="text-sm text-gray-600">{job.clinicName}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline">{app.status}</Badge>
-                    <p className="text-xs text-gray-600">Applied {formatDate(app.appliedAt)}</p>
-                  </div>
-                </Link>
-              );
-            })}
+            {filteredApplications.length === 0 ? (
+              <p className="text-sm text-gray-500 text-center py-4">No applications found.</p>
+            ) : (
+              filteredApplications.map((app) => (
+                <div key={app.id}>Application Item</div>
+              ))
+            )}
           </div>
         </div>
       )}
@@ -272,26 +393,13 @@ export default function ProfileDashboard() {
         <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
           <h3 className="text-lg font-semibold text-gray-900">Saved jobs</h3>
           <div className="mt-3 grid gap-3">
-            {jobs.slice(0, 3).map((job) => (
-              <Link
-                key={job.id}
-                to={`/jobs/${job.id}`}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-100 bg-gray-50 p-4 transition hover:border-brand"
-              >
-                <div>
-                  <p className="font-semibold text-gray-900">{job.roleType}</p>
-                  <p className="text-xs text-gray-600">
-                    {job.clinicName} - {job.city}
-                  </p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {job.specialtyTags.slice(0, 3).map((tag) => (
-                      <TagPill key={tag} label={tag} />
-                    ))}
-                  </div>
-                </div>
-                <span className="text-sm font-semibold text-brand">View job</span>
-              </Link>
-            ))}
+            {savedJobs.length === 0 ? (
+              <p className="text-sm text-gray-500">No saved jobs yet.</p>
+            ) : (
+              savedJobs.map((job) => (
+                <div key={job.id}>Job Item</div>
+              ))
+            )}
           </div>
         </div>
       )}
@@ -306,13 +414,14 @@ export default function ProfileDashboard() {
                 onClick={() => {
                   setShowUploadModal(false);
                   setUploadFileName('');
+                  setUploadFile(null);
                 }}
               >
                 Close
               </button>
             </div>
             <p className="mt-2 text-sm text-gray-600">
-              Upload your resume and the system will scan it to populate your profile details automatically.
+              Upload your resume (.pdf, .docx). The new file will replace your current latest resume.
             </p>
             <label className="mt-4 flex cursor-pointer items-center justify-between gap-2 rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-700 transition hover:border-brand">
               <span className="flex items-center gap-2">
@@ -322,9 +431,13 @@ export default function ProfileDashboard() {
               <input
                 type="file"
                 className="hidden"
+                accept=".pdf,.docx,.doc"
                 onChange={(event) => {
-                  const name = event.target.files?.[0]?.name;
-                  if (name) setUploadFileName(name);
+                  const file = event.target.files?.[0];
+                  if (file) {
+                    setUploadFile(file);
+                    setUploadFileName(file.name);
+                  }
                 }}
               />
             </label>
@@ -332,11 +445,12 @@ export default function ProfileDashboard() {
               <Button variant="ghost" size="sm" onClick={() => {
                 setShowUploadModal(false);
                 setUploadFileName('');
+                setUploadFile(null);
               }}>
                 Cancel
               </Button>
-              <Button variant="primary" size="sm" onClick={handleModalSave} disabled={!uploadFileName}>
-                Upload & autofill
+              <Button variant="primary" size="sm" onClick={handleResumeUpload} disabled={!uploadFile || uploading}>
+                {uploading ? 'Uploading...' : 'Upload'}
               </Button>
             </div>
           </div>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DashboardShell } from '../../layouts/DashboardShell';
 import { Stepper } from '../../components/Stepper';
@@ -9,6 +9,8 @@ import { Textarea } from '../../components/ui/textarea';
 import { Button } from '../../components/ui/button';
 import { Toast } from '../../components/ui/toast';
 import { Breadcrumbs } from '../../components/Breadcrumbs';
+import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabase';
 
 const sidebarLinks = [
   { to: '/employer/dashboard', label: 'Overview' },
@@ -24,9 +26,13 @@ const steps = [
 ];
 
 export default function PostJob() {
+  const { user } = useAuth();
   const [activeStep, setActiveStep] = useState(0);
   const [showToast, setShowToast] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
+  const [orgId, setOrgId] = useState<string | null>(null);
+
   const [form, setForm] = useState({
     roleType: 'Dental Assistant',
     clinicName: '',
@@ -36,24 +42,110 @@ export default function PostJob() {
     experienceLevel: 'Junior',
     newGradWelcome: true,
     trainingProvided: true,
-    salaryRange: '$2,800 - $3,500',
+    salaryMin: '2800',
+    salaryMax: '3500',
     schedule: '5-day week, rotating weekends',
-    benefits: 'Medical coverage, CPD allowance, Annual bonus'
+    benefits: 'Medical coverage, CPD allowance, Annual bonus',
+    requirements: '',
+    preferredExperience: ''
   });
+
+  useEffect(() => {
+    if (!user) return;
+    async function fetchOrg() {
+      const { data, error } = await supabase
+        .from('organizations')
+        .select('*')
+        .eq('owner_user_id', user!.id)
+        .single();
+
+      if (data) {
+        setOrgId(data.id);
+        setForm(f => ({
+          ...f,
+          clinicName: data.org_name,
+          city: data.city || '',
+          country: data.country || 'Malaysia'
+        }));
+      }
+    }
+    fetchOrg();
+  }, [user]);
 
   const next = () => setActiveStep((s) => Math.min(s + 1, steps.length - 1));
   const prev = () => setActiveStep((s) => Math.max(s - 1, 0));
 
-  const publish = () => {
-    setShowToast(true);
-    setTimeout(() => navigate('/employer/dashboard'), 1500);
+  const insertJob = async (status: 'published' | 'draft') => {
+    if (!orgId) {
+      alert("Organization profile missing. Please contact support.");
+      return;
+    }
+    setIsSubmitting(true);
+
+    try {
+      // Parse salary range roughly
+      // Parse salary strings to numbers
+      const minSal = parseInt(form.salaryMin.replace(/\D/g, ''), 10) || 0;
+      const maxSal = parseInt(form.salaryMax.replace(/\D/g, ''), 10) || 0;
+
+      // Map role type to closest enum or 'other'. 
+      // For simplicity, we downcast to any or 'other' if needed, but DB likely strictly checks.
+      // Provide a best-effort map or simplistic lower case match.
+      const roleTypeMap: Record<string, string> = {
+        'Dental Assistant': 'dental_assistant',
+        'Dentist (GP)': 'dentist_gp',
+        'Dentist (Specialist)': 'dentist_specialist',
+        'Dental Nurse': 'dental_nurse',
+        'Dental Hygienist': 'dental_hygienist',
+        'Receptionist': 'receptionist',
+        'Clinic Manager': 'clinic_manager',
+        'Lab Technician': 'lab_technician'
+      };
+      // Default to 'other' if not found.
+      const dbRoleType = roleTypeMap[form.roleType] || 'other';
+
+      const { error } = await supabase.from('jobs').insert({
+        org_id: orgId,
+        title: form.roleType, // Using role as title for now
+        role_type: dbRoleType as any,
+        employment_type: 'full_time', // TODO: map from form employment type
+        experience_level: form.experienceLevel.toLowerCase() as any,
+        // special tags split by comma
+        specialty_tags: form.specialtyTags.split(',').map(s => s.trim()).filter(Boolean),
+        description: `Requirements:\n${form.requirements}\n\nPreferred Experience:\n${form.preferredExperience}\n\nSchedule:\n${form.schedule}`,
+        salary_min: minSal,
+        salary_max: maxSal,
+        currency: 'MYR', // Default
+        benefits: { list: form.benefits.split(',').map(s => s.trim()) },
+        dental_requirements: {}, // Default empty
+        new_grad_welcome: form.newGradWelcome,
+        training_provided: form.trainingProvided,
+        status: status,
+        city: form.city,
+        country: form.country
+      });
+
+      if (error) {
+        console.error(error);
+        alert(`Error ${status === 'published' ? 'publishing' : 'saving'}: ` + error.message);
+      } else {
+        setShowToast(true);
+        setTimeout(() => navigate('/employer/dashboard'), 1500);
+      }
+
+    } catch (err) {
+      console.error(err);
+      alert("Unexpected error occurred.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <DashboardShell
       sidebarLinks={sidebarLinks}
       title="Post a Job"
-      subtitle="Multi-step UI only. Save/publish actions are mocked."
+      subtitle="Fill in the details to find your next great hire."
       hideNavigation
     >
       <Breadcrumbs items={[{ label: 'Employer Home', to: '/employers' }, { label: 'Post Job' }]} />
@@ -62,11 +154,20 @@ export default function PostJob() {
       <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
         {activeStep === 0 && (
           <div className="grid gap-4 md:grid-cols-2">
-            <Input
+            <Select
               label="Role title"
               value={form.roleType}
               onChange={(e) => setForm({ ...form, roleType: e.target.value })}
-            />
+            >
+              <option>Dental Assistant</option>
+              <option>Dentist (GP)</option>
+              <option>Dentist (Specialist)</option>
+              <option>Dental Nurse</option>
+              <option>Dental Hygienist</option>
+              <option>Receptionist</option>
+              <option>Clinic Manager</option>
+              <option>Lab Technician</option>
+            </Select>
             <Input
               label="Clinic name"
               value={form.clinicName}
@@ -86,8 +187,7 @@ export default function PostJob() {
               value={form.experienceLevel}
               onChange={(e) => setForm({ ...form, experienceLevel: e.target.value })}
             >
-              <option>Student</option>
-              <option>New Grad</option>
+              <option>Entry</option>
               <option>Junior</option>
               <option>Mid</option>
               <option>Senior</option>
@@ -119,18 +219,35 @@ export default function PostJob() {
               onChange={(e) => setForm({ ...form, specialtyTags: e.target.value })}
               hint="Comma-separated tags e.g. Intraoral scanning, Sterilization, Implants"
             />
-            <Textarea label="Key requirements" placeholder="Rubber dam, sterilization, chairside charting..." />
-            <Textarea label="Preferred experience" placeholder="1+ year in chairside support..." />
+            <Textarea
+              label="Key requirements"
+              placeholder="Rubber dam, sterilization, chairside charting..."
+              value={form.requirements}
+              onChange={(e) => setForm({ ...form, requirements: e.target.value })}
+            />
+            <Textarea
+              label="Preferred experience"
+              placeholder="1+ year in chairside support..."
+              value={form.preferredExperience}
+              onChange={(e) => setForm({ ...form, preferredExperience: e.target.value })}
+            />
           </div>
         )}
 
         {activeStep === 2 && (
           <div className="grid gap-4 md:grid-cols-2">
-            <Input
-              label="Salary range"
-              value={form.salaryRange}
-              onChange={(e) => setForm({ ...form, salaryRange: e.target.value })}
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label="Salary Min (MYR)"
+                value={form.salaryMin}
+                onChange={(e) => setForm({ ...form, salaryMin: e.target.value })}
+              />
+              <Input
+                label="Salary Max (MYR)"
+                value={form.salaryMax}
+                onChange={(e) => setForm({ ...form, salaryMax: e.target.value })}
+              />
+            </div>
             <Input
               label="Schedule"
               value={form.schedule}
@@ -147,7 +264,7 @@ export default function PostJob() {
 
         {activeStep === 3 && (
           <div className="space-y-3 text-sm text-gray-700">
-            <p className="text-lg font-semibold text-gray-900">Review (mock)</p>
+            <p className="text-lg font-semibold text-gray-900">Review</p>
             <p>
               <strong>Role:</strong> {form.roleType}
             </p>
@@ -158,7 +275,7 @@ export default function PostJob() {
               <strong>Specialties:</strong> {form.specialtyTags}
             </p>
             <p>
-              <strong>Salary:</strong> {form.salaryRange}
+              <strong>Salary:</strong> RM {form.salaryMin} - RM {form.salaryMax}
             </p>
             <p>
               <strong>Benefits:</strong> {form.benefits}
@@ -177,19 +294,21 @@ export default function PostJob() {
               </Button>
             )}
             {activeStep === steps.length - 1 && (
-              <Button variant="primary" onClick={publish}>
-                Publish (mock)
+              <Button variant="primary" onClick={() => insertJob('published')} disabled={isSubmitting}>
+                {isSubmitting ? 'Publishing...' : 'Publish'}
               </Button>
             )}
           </div>
-          <Button variant="ghost">Save draft</Button>
+          <Button variant="ghost" onClick={() => insertJob('draft')} disabled={isSubmitting}>
+            {isSubmitting ? 'Saving...' : 'Save draft'}
+          </Button>
         </div>
       </div>
 
       <Toast
         open={showToast}
         onClose={() => setShowToast(false)}
-        title="Job published (mock)"
+        title="Job published"
         description="Redirecting to dashboard..."
       />
     </DashboardShell>

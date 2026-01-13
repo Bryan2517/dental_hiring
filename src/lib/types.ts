@@ -13,7 +13,7 @@ export interface Job {
   city: string;
   country: string;
   specialtyTags: string[];
-  employmentType: 'Full-time' | 'Part-time' | 'Locum' | 'Contract';
+  employmentType: 'Full-time' | 'Part-time' | 'Locum' | 'Contract' | 'Internship' | 'Temporary';
   shiftType: 'Day' | 'Night' | 'Rotating';
   salaryRange: string;
   benefits: string[];
@@ -53,4 +53,5 @@ export interface Resume {
   name: string;
   uploadedAt: string;
   category?: 'Resume' | 'Cover letter' | 'Portfolio' | 'Certificate' | 'Other';
+  url?: string;
 }

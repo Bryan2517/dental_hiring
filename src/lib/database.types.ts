@@ -7,6 +7,11 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.1"
+  }
   public: {
     Tables: {
       application_events: {
@@ -478,6 +483,7 @@ export type Database = {
       seeker_profiles: {
         Row: {
           bio: string | null
+          clinical_exposures: Json | null
           created_at: string
           education_level: string | null
           expected_graduation_date: string | null
@@ -494,6 +500,7 @@ export type Database = {
         }
         Insert: {
           bio?: string | null
+          clinical_exposures?: Json | null
           created_at?: string
           education_level?: string | null
           expected_graduation_date?: string | null
@@ -510,6 +517,7 @@ export type Database = {
         }
         Update: {
           bio?: string | null
+          clinical_exposures?: Json | null
           created_at?: string
           education_level?: string | null
           expected_graduation_date?: string | null
@@ -696,49 +704,57 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      is_admin: { Args: Record<PropertyKey, never>; Returns: boolean }
-      is_org_member: { Args: { p_org_id: string }; Returns: boolean }
+      is_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      is_org_member: {
+        Args: {
+          p_org_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       application_status:
-        | "applied"
-        | "shortlisted"
-        | "interview"
-        | "offer"
-        | "hired"
-        | "rejected"
-        | "withdrawn"
+      | "applied"
+      | "shortlisted"
+      | "interview"
+      | "offer"
+      | "hired"
+      | "rejected"
+      | "withdrawn"
       doc_type:
-        | "resume"
-        | "certificate"
-        | "transcript"
-        | "recommendation"
-        | "license"
-        | "other"
+      | "resume"
+      | "certificate"
+      | "transcript"
+      | "recommendation"
+      | "license"
+      | "other"
       employment_type:
-        | "full_time"
-        | "part_time"
-        | "internship"
-        | "contract"
-        | "temporary"
+      | "full_time"
+      | "part_time"
+      | "internship"
+      | "contract"
+      | "temporary"
       experience_level: "entry" | "junior" | "mid" | "senior"
       job_status: "draft" | "published" | "paused" | "closed"
       member_status: "active" | "invited" | "disabled"
       org_member_role: "owner" | "hr" | "manager"
       org_type: "clinic" | "lab" | "dental_group" | "supplier" | "other"
       role_type:
-        | "dentist_gp"
-        | "dentist_specialist"
-        | "dental_assistant"
-        | "dental_nurse"
-        | "dental_hygienist"
-        | "dental_therapist"
-        | "receptionist"
-        | "treatment_coordinator"
-        | "lab_technician"
-        | "clinic_manager"
-        | "sterilization_technician"
-        | "other"
+      | "dentist_gp"
+      | "dentist_specialist"
+      | "dental_assistant"
+      | "dental_nurse"
+      | "dental_hygienist"
+      | "dental_therapist"
+      | "receptionist"
+      | "treatment_coordinator"
+      | "lab_technician"
+      | "clinic_manager"
+      | "sterilization_technician"
+      | "other"
       seeker_type: "student" | "fresh_grad" | "professional"
       user_role: "seeker" | "employer" | "admin"
       verified_status: "unverified" | "pending" | "verified" | "rejected"
@@ -748,3 +764,102 @@ export type Database = {
     }
   }
 }
+
+type PublicSchema = Database[Extract<keyof Database, "public">]
+
+type SchemaName = Exclude<keyof Database, "__InternalSupabase">
+
+export type Tables<
+  PublicTableNameOrOptions extends
+  | keyof (PublicSchema["Tables"] & PublicSchema["Views"])
+  | { schema: SchemaName },
+  TableName extends PublicTableNameOrOptions extends { schema: SchemaName }
+  ? keyof (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
+    Database[PublicTableNameOrOptions["schema"]]["Views"])
+  : never = never,
+> = PublicTableNameOrOptions extends { schema: SchemaName }
+  ? (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
+    Database[PublicTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
+  ? R
+  : never
+  : PublicTableNameOrOptions extends keyof (PublicSchema["Tables"] &
+    PublicSchema["Views"])
+  ? (PublicSchema["Tables"] &
+    PublicSchema["Views"])[PublicTableNameOrOptions] extends {
+      Row: infer R
+    }
+  ? R
+  : never
+  : never
+
+export type TablesInsert<
+  PublicTableNameOrOptions extends
+  | keyof PublicSchema["Tables"]
+  | { schema: SchemaName },
+  TableName extends PublicTableNameOrOptions extends { schema: SchemaName }
+  ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
+  : never = never,
+> = PublicTableNameOrOptions extends { schema: SchemaName }
+  ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+    Insert: infer I
+  }
+  ? I
+  : never
+  : PublicTableNameOrOptions extends keyof PublicSchema["Tables"]
+  ? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
+    Insert: infer I
+  }
+  ? I
+  : never
+  : never
+
+export type TablesUpdate<
+  PublicTableNameOrOptions extends
+  | keyof PublicSchema["Tables"]
+  | { schema: SchemaName },
+  TableName extends PublicTableNameOrOptions extends { schema: SchemaName }
+  ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
+  : never = never,
+> = PublicTableNameOrOptions extends { schema: SchemaName }
+  ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+    Update: infer U
+  }
+  ? U
+  : never
+  : PublicTableNameOrOptions extends keyof PublicSchema["Tables"]
+  ? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
+    Update: infer U
+  }
+  ? U
+  : never
+  : never
+
+export type Enums<
+  PublicEnumNameOrOptions extends
+  | keyof PublicSchema["Enums"]
+  | { schema: SchemaName },
+  EnumName extends PublicEnumNameOrOptions extends { schema: SchemaName }
+  ? keyof Database[PublicEnumNameOrOptions["schema"]]["Enums"]
+  : never = never,
+> = PublicEnumNameOrOptions extends { schema: SchemaName }
+  ? Database[PublicEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : PublicEnumNameOrOptions extends keyof PublicSchema["Enums"]
+  ? PublicSchema["Enums"][PublicEnumNameOrOptions]
+  : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+  | keyof PublicSchema["CompositeTypes"]
+  | { schema: SchemaName },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: SchemaName
+  }
+  ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+  : never = never,
+> = PublicCompositeTypeNameOrOptions extends { schema: SchemaName }
+  ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof PublicSchema["CompositeTypes"]
+  ? PublicSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+  : never
