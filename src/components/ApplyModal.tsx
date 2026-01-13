@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { UploadCloud } from 'lucide-react';
 import { Modal } from './ui/modal';
 import { Button } from './ui/button';
@@ -17,8 +16,7 @@ interface ApplyModalProps {
 }
 
 export function ApplyModal({ open, job, onClose, resumes }: ApplyModalProps) {
-  const { user, userRole } = useAuth();
-  const navigate = useNavigate();
+  const { user, userRole, openAuthModal } = useAuth();
   const [selectedResume, setSelectedResume] = useState<string>(resumes[0]?.id ?? '');
   const [uploadedFile, setUploadedFile] = useState<string>('');
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -28,13 +26,13 @@ export function ApplyModal({ open, job, onClose, resumes }: ApplyModalProps) {
     // If modal opens but user is not authenticated or not a seeker, redirect to login
     if (open && (!user || userRole !== 'seeker')) {
       onClose();
-      navigate('/login?redirect=apply');
+      openAuthModal('login', job ? `/jobs/${job.id}` : '/jobs');
     }
-  }, [open, user, userRole, navigate, onClose]);
+  }, [open, user, userRole, openAuthModal, onClose, job]);
 
   const handleSubmit = () => {
     if (!user || userRole !== 'seeker') {
-      navigate('/login?redirect=apply');
+      openAuthModal('login', job ? `/jobs/${job.id}` : '/jobs');
       onClose();
       return;
     }

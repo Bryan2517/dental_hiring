@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { AppShell } from '../../layouts/AppShell';
 import { Job } from '../../lib/types';
 import { JobCard } from '../../components/JobCard';
@@ -25,8 +24,7 @@ const defaultFilters: JobFilterState = {
 };
 
 export default function JobsList() {
-  const { user, userRole } = useAuth();
-  const navigate = useNavigate();
+  const { user, userRole, openAuthModal } = useAuth();
   const [filters, setFilters] = useState<JobFilterState>(defaultFilters);
   const [sortBy, setSortBy] = useState('relevance');
   const [page, setPage] = useState(1);
@@ -38,7 +36,7 @@ export default function JobsList() {
 
   const handleApplyClick = (job: Job) => {
     if (!user || userRole !== 'seeker') {
-      navigate(`/login?redirect=/jobs/${job.id}`);
+      openAuthModal('login', `/jobs/${job.id}`);
     } else {
       setSelectedJob(job);
     }

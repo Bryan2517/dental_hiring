@@ -14,7 +14,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showToast, setShowToast] = useState(false);
-  const { signIn, userRole } = useAuth();
+  const { signIn } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirectTo = searchParams.get('redirect');
@@ -24,7 +24,7 @@ export default function Login() {
     setLoading(true);
     setError(null);
 
-    const { error } = await signIn(email, password);
+    const { error, role } = await signIn(email, password);
 
     if (error) {
       setError(error.message);
@@ -35,15 +35,20 @@ export default function Login() {
       setTimeout(() => {
         if (redirectTo === 'apply') {
           navigate('/jobs');
-        } else if (redirectTo) {
-          navigate(redirectTo);
-        } else if (userRole === 'employer') {
-          navigate('/employer/dashboard');
-        } else if (userRole === 'seeker') {
-          navigate('/jobs');
-        } else {
-          navigate('/jobs');
+          return;
         }
+
+        if (redirectTo) {
+          navigate(redirectTo);
+          return;
+        }
+
+        if (role === 'employer') {
+          navigate('/employers');
+          return;
+        }
+
+        navigate('/seekers');
       }, 1000);
     }
   };

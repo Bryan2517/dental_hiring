@@ -35,12 +35,12 @@ export function TopNav() {
     ];
   }, [activeRole]);
 
-  const { signOut } = useAuth();
+  const { signOut, user, openAuthModal } = useAuth();
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
     await signOut();
-    navigate('/login', { replace: true });
+    navigate('/seekers', { replace: true });
   };
 
   return (
@@ -70,31 +70,28 @@ export function TopNav() {
               {activeRole === 'employer' ? "I'm a seeker" : "I'm an employer"}
             </Link>
           )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={user ? handleSignOut : () => openAuthModal('login')}
+          >
+            {user ? 'Sign out' : 'Sign in'}
+          </Button>
           {activeRole === 'employer' ? (
-            <>
-              <Button variant="ghost" size="sm" onClick={handleSignOut}>
-                Sign out
-              </Button>
-              <Link
-                to="/employer/post-job"
-                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-brand to-brand-hover px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:-translate-y-0.5"
-              >
-                Post a Job
-              </Link>
-            </>
+            <Link
+              to="/employer/post-job"
+              className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-brand to-brand-hover px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:-translate-y-0.5"
+            >
+              Post a Job
+            </Link>
           ) : (
-            <>
-              <Button variant="ghost" size="sm" onClick={handleSignOut}>
-                Sign out
-              </Button>
-              <Link
-                to="/jobs"
-                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-brand to-brand-hover px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:-translate-y-0.5"
-              >
-                <Briefcase className="h-4 w-4" />
-                Browse Jobs
-              </Link>
-            </>
+            <Link
+              to="/jobs"
+              className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-brand to-brand-hover px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:-translate-y-0.5"
+            >
+              <Briefcase className="h-4 w-4" />
+              Browse Jobs
+            </Link>
           )}
         </div>
       </div>

@@ -15,7 +15,7 @@ import { useAuth } from '../../contexts/AuthContext';
 
 export default function JobDetails() {
   const { id } = useParams<{ id: string }>();
-  const { user, userRole } = useAuth();
+  const { user, userRole, openAuthModal } = useAuth();
   const navigate = useNavigate();
   const [job, setJob] = useState<Job | null>(null);
   const [similarJobs, setSimilarJobs] = useState<Job[]>([]);
@@ -203,10 +203,15 @@ export default function JobDetails() {
                 rightIcon={<Sparkles className="h-4 w-4" />}
                 onClick={() => {
                   if (!user || userRole !== 'seeker') {
-                    navigate('/login?redirect=' + encodeURIComponent(`/jobs/${id}`));
-                  } else {
-                    setShowApply(true);
+                    if (id) {
+                      openAuthModal('login', `/jobs/${id}`);
+                    } else {
+                      openAuthModal('login', '/jobs');
+                    }
+                    return;
                   }
+
+                  setShowApply(true);
                 }}
               >
                 Quick apply

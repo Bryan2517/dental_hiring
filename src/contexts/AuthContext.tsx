@@ -4,16 +4,28 @@ import { supabase } from '../lib/supabase';
 import type { Database } from '../lib/database.types';
 
 type UserRole = Database['public']['Enums']['user_role'];
+type AuthModalMode = 'login' | 'register';
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
   userRole: UserRole | null;
-  signUp: (email: string, password: string, fullName: string, role: UserRole, metadata?: Record<string, any>) => Promise<{ error: AuthError | null }>;
-  signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>;
+  signUp: (
+    email: string,
+    password: string,
+    fullName: string,
+    role: UserRole,
+    metadata?: Record<string, any>
+  ) => Promise<{ error: AuthError | null; role: UserRole }>;
+  signIn: (email: string, password: string) => Promise<{ error: AuthError | null; role: UserRole | null }>;
   signOut: () => Promise<void>;
   updateProfile: (updates: { full_name?: string; phone?: string; avatar_url?: string }) => Promise<{ error: Error | null }>;
+  authModalOpen: boolean;
+  authModalMode: AuthModalMode;
+  authModalRedirectPath: string | null;
+  openAuthModal: (mode?: AuthModalMode, redirectTo?: string | null) => void;
+  closeAuthModal: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -23,6 +35,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<AuthModalMode>('login');
+  const [authModalRedirectPath, setAuthModalRedirectPath] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -132,7 +147,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (authError) {
-        return { error: authError };
+        return { error: authError, role };
       }
 
       if (authData.user) {
@@ -152,7 +167,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (profileError) {
           console.error('Error creating profile:', profileError);
-          return { error: profileError as any };
+          return { error: profileError as any, role };
         }
 
         const { error: roleError } = await supabase.from('user_roles').insert({
@@ -162,7 +177,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (roleError) {
           console.error('Error creating user role:', roleError);
-          return { error: roleError as any };
+          return { error: roleError as any, role };
         }
 
         if (role === 'seeker' && metadata?.seekerData) {
@@ -194,24 +209,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      return { error: null };
+      setUserRole(role);
+      return { error: null, role };
     } catch (error) {
       console.error('Error signing up:', error);
-      return { error: error as AuthError };
+      return { error: error as AuthError, role };
     }
   }
 
   async function signIn(email: string, password: string) {
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
-    return { error };
+    let role: UserRole | null = null;
+    if (data.user) {
+      role = await loadUserRole(data.user.id);
+      setUserRole(role);
+    }
+
+    return { error, role };
   }
 
   async function signOut() {
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.error('Error signing out:', error);
+    } finally {
+      setUser(null);
+      setSession(null);
+      setUserRole(null);
+      setLoading(false);
+    }
   }
 
   async function updateProfile(updates: { full_name?: string; phone?: string; avatar_url?: string }) {
@@ -227,6 +258,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error };
   }
 
+  const openAuthModal = (mode: AuthModalMode = 'login', redirectTo?: string | null) => {
+    setAuthModalMode(mode);
+    setAuthModalRedirectPath(redirectTo ?? null);
+    setAuthModalOpen(true);
+  };
+
+  const closeAuthModal = () => {
+    setAuthModalOpen(false);
+    setAuthModalRedirectPath(null);
+  };
+
   const value = {
     user,
     session,
@@ -236,6 +278,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signIn,
     signOut,
     updateProfile,
+    authModalOpen,
+    authModalMode,
+    authModalRedirectPath,
+    openAuthModal,
+    closeAuthModal,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
