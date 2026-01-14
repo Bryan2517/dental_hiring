@@ -1,0 +1,20 @@
+import type { Database } from '../database.types';
+import type { Resume } from '../types';
+type ProfileRow = Database['public']['Tables']['profiles']['Row'];
+type SeekerProfileRow = Database['public']['Tables']['seeker_profiles']['Row'];
+type OrganizationRow = Database['public']['Tables']['organizations']['Row'];
+export declare function uploadResumeFile(file: File, userId: string): Promise<string>;
+export declare function getProfile(userId: string): Promise<ProfileRow | null>;
+export declare function getSeekerProfile(userId: string): Promise<SeekerProfileRow | null>;
+export declare function updateProfile(userId: string, updates: Partial<ProfileRow>): Promise<void>;
+export declare function updateSeekerProfile(userId: string, updates: Partial<SeekerProfileRow>): Promise<void>;
+export declare function getUserDocuments(userId: string): Promise<Resume[]>;
+export declare function createDocument(documentData: {
+    user_id: string;
+    title: string;
+    storage_path: string;
+    doc_type: Database['public']['Enums']['doc_type'];
+    is_default?: boolean;
+}): Promise<Resume>;
+export declare function getUserOrganization(userId: string): Promise<OrganizationRow | null>;
+export {};

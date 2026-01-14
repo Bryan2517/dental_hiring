@@ -85,12 +85,12 @@ export default function Landing() {
               ))}
             </div>
           </div>
-        <div className="grid grid-cols-2 gap-3">
-          <MiniStat label="Active jobs" value="200+" />
-          <MiniStat label="Dental resumes" value="5,100" />
-          <MiniStat label="Avg. time to shortlist" value="48h" />
-          <MiniStat label="Interviews scheduled weekly" value="320+" />
-        </div>
+          <div className="grid grid-cols-2 gap-3">
+            <MiniStat label="Active jobs" value="200+" />
+            <MiniStat label="Dental resumes" value="5,100" />
+            <MiniStat label="Avg. time to shortlist" value="48h" />
+            <MiniStat label="Interviews scheduled weekly" value="320+" />
+          </div>
         </div>
       </div>
 
@@ -113,7 +113,7 @@ export default function Landing() {
             <h2 className="text-2xl font-bold text-gray-900">Dental jobs trending this week</h2>
           </div>
           <Link to="/jobs" className="text-sm font-semibold text-brand hover:text-brand-hover">
-            View all jobs ->
+            View all jobs
           </Link>
         </div>
         <div className="grid gap-4">

@@ -3,6 +3,7 @@ import { Application, Candidate, Job, Resume } from './types';
 export const jobs: Job[] = [
   {
     id: 'job-1',
+    orgId: 'org-1',
     roleType: 'Dental Assistant - Surgical',
     clinicName: 'Bluewave Dental',
     city: 'Kuala Lumpur',
@@ -22,6 +23,7 @@ export const jobs: Job[] = [
   },
   {
     id: 'job-2',
+    orgId: 'org-1',
     roleType: 'Dental Student Intern',
     clinicName: 'Smile Hub',
     city: 'Singapore',
@@ -41,6 +43,7 @@ export const jobs: Job[] = [
   },
   {
     id: 'job-3',
+    orgId: 'org-1',
     roleType: 'Dental Nurse - Pediatric',
     clinicName: 'Happy Teeth Kids',
     city: 'Petaling Jaya',
@@ -60,6 +63,7 @@ export const jobs: Job[] = [
   },
   {
     id: 'job-4',
+    orgId: 'org-1',
     roleType: 'Treatment Coordinator',
     clinicName: 'PrimeCare Dental',
     city: 'Johor Bahru',
@@ -79,6 +83,7 @@ export const jobs: Job[] = [
   },
   {
     id: 'job-5',
+    orgId: 'org-1',
     roleType: 'Infection Control Lead',
     clinicName: 'SterileSmiles',
     city: 'Singapore',
@@ -98,6 +103,7 @@ export const jobs: Job[] = [
   },
   {
     id: 'job-6',
+    orgId: 'org-1',
     roleType: 'Dental Assistant - Endodontics',
     clinicName: 'CanalCare Specialists',
     city: 'Kuala Lumpur',
@@ -117,6 +123,7 @@ export const jobs: Job[] = [
   },
   {
     id: 'job-7',
+    orgId: 'org-1',
     roleType: 'Dental Receptionist',
     clinicName: 'City Dental Lounge',
     city: 'George Town',
@@ -136,6 +143,7 @@ export const jobs: Job[] = [
   },
   {
     id: 'job-8',
+    orgId: 'org-1',
     roleType: 'Orthodontic Assistant',
     clinicName: 'Align Studio',
     city: 'Singapore',
@@ -155,6 +163,7 @@ export const jobs: Job[] = [
   },
   {
     id: 'job-9',
+    orgId: 'org-1',
     roleType: 'Dental Assistant - Oral Surgery',
     clinicName: 'MaxFac Center',
     city: 'Kuala Lumpur',
@@ -174,6 +183,7 @@ export const jobs: Job[] = [
   },
   {
     id: 'job-10',
+    orgId: 'org-1',
     roleType: 'Clinic Manager',
     clinicName: 'Harbor Dental',
     city: 'Johor Bahru',
@@ -193,6 +203,7 @@ export const jobs: Job[] = [
   },
   {
     id: 'job-11',
+    orgId: 'org-1',
     roleType: 'Dental Technologist (Digital)',
     clinicName: 'SmileLab',
     city: 'Singapore',
@@ -212,6 +223,7 @@ export const jobs: Job[] = [
   },
   {
     id: 'job-12',
+    orgId: 'org-1',
     roleType: 'Sterilization Tech (Evenings)',
     clinicName: 'NightGuard Dental',
     city: 'Petaling Jaya',
@@ -231,6 +243,7 @@ export const jobs: Job[] = [
   },
   {
     id: 'job-13',
+    orgId: 'org-1',
     roleType: 'Dental Assistant - Prostho',
     clinicName: 'ReLine Prosthodontics',
     city: 'Singapore',
@@ -250,6 +263,7 @@ export const jobs: Job[] = [
   },
   {
     id: 'job-14',
+    orgId: 'org-1',
     roleType: 'Dental Assistant - Hygiene',
     clinicName: 'Fresh Breath Dental',
     city: 'George Town',
@@ -269,6 +283,7 @@ export const jobs: Job[] = [
   },
   {
     id: 'job-15',
+    orgId: 'org-1',
     roleType: 'Dental Assistant - Implant Coordinator',
     clinicName: 'Osseo Dental',
     city: 'Kuala Lumpur',
@@ -288,6 +303,7 @@ export const jobs: Job[] = [
   },
   {
     id: 'job-16',
+    orgId: 'org-1',
     roleType: 'Dental Assistant - Sedation',
     clinicName: 'Calm Dental',
     city: 'Singapore',
@@ -307,6 +323,7 @@ export const jobs: Job[] = [
   },
   {
     id: 'job-17',
+    orgId: 'org-1',
     roleType: 'Dental Assistant - General',
     clinicName: 'Neighborhood Smiles',
     city: 'Melaka',
@@ -326,6 +343,7 @@ export const jobs: Job[] = [
   },
   {
     id: 'job-18',
+    orgId: 'org-1',
     roleType: 'Dental Assistant - Scanner',
     clinicName: 'Scan+Smile',
     city: 'Singapore',
@@ -345,6 +363,7 @@ export const jobs: Job[] = [
   },
   {
     id: 'job-19',
+    orgId: 'org-1',
     roleType: 'Dental Assistant - Endo/Prosth Float',
     clinicName: 'Canal & Crown',
     city: 'Kuala Lumpur',
@@ -364,6 +383,7 @@ export const jobs: Job[] = [
   },
   {
     id: 'job-20',
+    orgId: 'org-1',
     roleType: 'Dental Assistant - Steri & Floater',
     clinicName: 'NorthStar Dental',
     city: 'Singapore',
@@ -394,7 +414,9 @@ export const candidates: Candidate[] = [
     rating: 4.5,
     city: 'Kuala Lumpur',
     notes: 'Strong restorative exposure',
-    interestedIn: 'General assistant'
+    interestedIn: 'General assistant',
+    jobId: 'job-1',
+    jobTitle: 'Dental Assistant - Surgical'
   },
   {
     id: 'cand-2',
@@ -406,7 +428,9 @@ export const candidates: Candidate[] = [
     rating: 4.2,
     city: 'Petaling Jaya',
     notes: 'Takes initiative on turnover',
-    interestedIn: 'Infection control'
+    interestedIn: 'Infection control',
+    jobId: 'job-5',
+    jobTitle: 'Infection Control Lead'
   },
   {
     id: 'cand-3',
@@ -417,7 +441,9 @@ export const candidates: Candidate[] = [
     status: 'Interview',
     rating: 4.7,
     city: 'Singapore',
-    interestedIn: 'Ortho assistant'
+    interestedIn: 'Ortho assistant',
+    jobId: 'job-8',
+    jobTitle: 'Orthodontic Assistant'
   },
   {
     id: 'cand-4',
@@ -428,7 +454,9 @@ export const candidates: Candidate[] = [
     status: 'Offer',
     rating: 4.0,
     city: 'Johor Bahru',
-    interestedIn: 'Hygiene support'
+    interestedIn: 'Hygiene support',
+    jobId: 'job-14',
+    jobTitle: 'Dental Assistant - Hygiene'
   },
   {
     id: 'cand-5',
@@ -439,7 +467,9 @@ export const candidates: Candidate[] = [
     status: 'Hired',
     rating: 4.8,
     city: 'Singapore',
-    notes: 'Specializes in endo support'
+    notes: 'Specializes in endo support',
+    jobId: 'job-6',
+    jobTitle: 'Dental Assistant - Endodontics'
   },
   {
     id: 'cand-6',
@@ -450,7 +480,9 @@ export const candidates: Candidate[] = [
     status: 'Rejected',
     rating: 3.8,
     city: 'Melaka',
-    notes: 'Good attitude, needs more scanning practice'
+    notes: 'Good attitude, needs more scanning practice',
+    jobId: 'job-17',
+    jobTitle: 'Dental Assistant - General'
   },
   {
     id: 'cand-7',
@@ -461,7 +493,9 @@ export const candidates: Candidate[] = [
     status: 'Applied',
     rating: 4.3,
     city: 'Kuala Lumpur',
-    interestedIn: 'Pediatric assistant'
+    interestedIn: 'Pediatric assistant',
+    jobId: 'job-3',
+    jobTitle: 'Dental Nurse - Pediatric'
   },
   {
     id: 'cand-8',
@@ -472,7 +506,9 @@ export const candidates: Candidate[] = [
     status: 'Shortlisted',
     rating: 4.1,
     city: 'Singapore',
-    interestedIn: 'Treatment coordinator'
+    interestedIn: 'Treatment coordinator',
+    jobId: 'job-4',
+    jobTitle: 'Treatment Coordinator'
   },
   {
     id: 'cand-9',
@@ -482,7 +518,9 @@ export const candidates: Candidate[] = [
     skills: ['Sterilization', 'Sealants', 'Intraoral scanning'],
     status: 'Interview',
     rating: 4.4,
-    city: 'Petaling Jaya'
+    city: 'Petaling Jaya',
+    jobId: 'job-1',
+    jobTitle: 'Dental Assistant - Surgical'
   },
   {
     id: 'cand-10',
@@ -493,7 +531,9 @@ export const candidates: Candidate[] = [
     status: 'Offer',
     rating: 4.6,
     city: 'Kuala Lumpur',
-    interestedIn: 'Digital lab'
+    interestedIn: 'Digital lab',
+    jobId: 'job-11',
+    jobTitle: 'Dental Technologist (Digital)'
   },
   {
     id: 'cand-11',
@@ -504,7 +544,9 @@ export const candidates: Candidate[] = [
     status: 'Applied',
     rating: 4.2,
     city: 'Singapore',
-    interestedIn: 'Sedation support'
+    interestedIn: 'Sedation support',
+    jobId: 'job-16',
+    jobTitle: 'Dental Assistant - Sedation'
   },
   {
     id: 'cand-12',
@@ -514,7 +556,9 @@ export const candidates: Candidate[] = [
     skills: ['Chairside charting', 'Patient education'],
     status: 'Rejected',
     rating: 3.5,
-    city: 'Johor Bahru'
+    city: 'Johor Bahru',
+    jobId: 'job-7',
+    jobTitle: 'Dental Receptionist'
   }
 ];
 
