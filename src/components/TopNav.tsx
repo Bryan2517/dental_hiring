@@ -1,9 +1,11 @@
-import { ReactNode, useMemo } from 'react';
+import { ReactNode, useMemo, useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Briefcase, Building2Icon, LayoutDashboard, User2, UserRoundSearch, Wallet } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Role } from './RoleSwitch';
 import { Button } from './ui/button';
+import { Modal } from './ui/modal';
+import { Toast } from './ui/toast';
 import { useAuth } from '../contexts/AuthContext';
 
 export function TopNav() {
@@ -38,65 +40,106 @@ export function TopNav() {
 
   const { signOut, user, openAuthModal } = useAuth();
   const navigate = useNavigate();
+  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
+  const [showSignOutToast, setShowSignOutToast] = useState(false);
 
-  const handleSignOut = async () => {
+  const handleSignOutClick = () => {
+    setShowSignOutConfirm(true);
+  };
+
+  const handleConfirmSignOut = async () => {
     await signOut();
+    setShowSignOutConfirm(false);
+    setShowSignOutToast(true);
     navigate('/seekers', { replace: true });
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-white/40 shadow-sm">
-      <div className="container-wide flex items-center justify-between py-4">
-        <Link to="/" className="flex items-center gap-3">
-          <img
-            src="/Mr_Bur_Logo.png"
-            alt="MR.BUR Dental Jobs logo"
-            className="h-10 w-auto object-contain"
-            loading="lazy"
-          />
-        </Link>
+    <>
+      <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-white/40 shadow-sm">
+        <div className="container-wide flex items-center justify-between py-4">
+          <Link to="/" className="flex items-center gap-3">
+            <img
+              src="/Mr_Bur_Logo.png"
+              alt="MR.BUR Dental Jobs logo"
+              className="h-10 w-auto object-contain"
+              loading="lazy"
+            />
+          </Link>
 
-        <nav className="hidden items-center gap-2 text-sm font-medium text-gray-700 lg:flex">
-          {navLinks.map((link) => (
-            <NavItem key={link.to} to={link.to} label={link.label} icon={link.icon} />
-          ))}
-        </nav>
+          <nav className="hidden items-center gap-2 text-sm font-medium text-gray-700 lg:flex">
+            {navLinks.map((link) => (
+              <NavItem key={link.to} to={link.to} label={link.label} icon={link.icon} />
+            ))}
+          </nav>
 
-        <div className="flex items-center gap-3">
-          {activeRole !== 'admin' && (
-            <Link
-              to={activeRole === 'employer' ? '/seekers' : '/employers'}
-              className="inline-flex items-center gap-2 rounded-full border border-brand/20 bg-white px-4 py-2 text-sm font-semibold text-brand shadow-sm transition hover:-translate-y-0.5 hover:bg-brand/10"
+          <div className="flex items-center gap-3">
+            {activeRole !== 'admin' && (
+              <Link
+                to={activeRole === 'employer' ? '/seekers' : '/employers'}
+                className="inline-flex items-center gap-2 rounded-full border border-brand/20 bg-white px-4 py-2 text-sm font-semibold text-brand shadow-sm transition hover:-translate-y-0.5 hover:bg-brand/10"
+              >
+                {activeRole === 'employer' ? "I'm a seeker" : "I'm an employer"}
+              </Link>
+            )}
+            {activeRole === 'employer' ? (
+              <Link
+                to="/employer/post-job"
+                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-brand to-brand-hover px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:-translate-y-0.5"
+              >
+                Post a Job
+              </Link>
+            ) : (
+              <Link
+                to="/jobs"
+                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-brand to-brand-hover px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:-translate-y-0.5"
+              >
+                <Briefcase className="h-4 w-4" />
+                Browse Jobs
+              </Link>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={user ? handleSignOutClick : () => openAuthModal('login')}
             >
-              {activeRole === 'employer' ? "I'm a seeker" : "I'm an employer"}
-            </Link>
-          )}
-          {activeRole === 'employer' ? (
-            <Link
-              to="/employer/post-job"
-              className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-brand to-brand-hover px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:-translate-y-0.5"
-            >
-              Post a Job
-            </Link>
-          ) : (
-            <Link
-              to="/jobs"
-              className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-brand to-brand-hover px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:-translate-y-0.5"
-            >
-              <Briefcase className="h-4 w-4" />
-              Browse Jobs
-            </Link>
-          )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={user ? handleSignOut : () => openAuthModal('login')}
-          >
-            {user ? 'Sign out' : 'Sign in'}
-          </Button>
+              {user ? 'Sign out' : 'Sign in'}
+            </Button>
+          </div>
         </div>
-      </div>
-    </header>
+      </header>
+
+      <Modal
+        open={showSignOutConfirm}
+        onClose={() => setShowSignOutConfirm(false)}
+        title="Sign Out Assessment"
+        maxWidth="max-w-sm"
+      >
+        <div className="flex flex-col gap-4">
+          <p className="text-gray-600">Are you sure you want to sign out of your account?</p>
+          <div className="flex justify-end gap-3">
+            <Button variant="ghost" onClick={() => setShowSignOutConfirm(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleConfirmSignOut}
+              className="bg-red-600 hover:bg-red-700 border-red-600 from-red-600 to-red-700"
+            >
+              Sign Out
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Toast
+        open={showSignOutToast}
+        onClose={() => setShowSignOutToast(false)}
+        title="Signed out"
+        description="You have been signed out successfully."
+        variant="success"
+      />
+    </>
   );
 }
 
