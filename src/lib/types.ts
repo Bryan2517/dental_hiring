@@ -24,6 +24,9 @@ export interface Job {
   trainingProvided: boolean;
   internshipAvailable: boolean;
   description: string;
+  salaryMin?: number;
+  salaryMax?: number;
+  orgId: string;
 }
 
 export interface Candidate {
@@ -37,6 +40,8 @@ export interface Candidate {
   city: string;
   notes?: string;
   interestedIn?: string;
+  jobId: string;
+  jobTitle: string;
 }
 
 
@@ -46,6 +51,9 @@ export interface Application {
   status: JobStage;
   appliedAt: string;
   candidateName: string;
+  jobTitle?: string;
+  clinicName?: string;
+  location?: string;
 }
 
 export interface Resume {
@@ -54,4 +62,5 @@ export interface Resume {
   uploadedAt: string;
   category?: 'Resume' | 'Cover letter' | 'Portfolio' | 'Certificate' | 'Other';
   url?: string;
+  isDefault?: boolean;
 }

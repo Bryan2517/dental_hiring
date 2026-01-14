@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { DashboardShell } from '../../layouts/DashboardShell';
-import { candidates as initialCandidates } from '../../lib/mockData';
 import { Candidate, JobStage } from '../../lib/types';
 import { KanbanBoard } from '../../components/KanbanBoard';
 import { CandidateDrawer } from '../../components/CandidateDrawer';
@@ -11,21 +11,87 @@ import { Input } from '../../components/ui/input';
 import { Select } from '../../components/ui/select';
 import { Button } from '../../components/ui/button';
 import { Toast } from '../../components/ui/toast';
+import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabase';
+import { getCandidatesForOrg, updateApplicationStatus } from '../../lib/api/applications';
 
 const sidebarLinks = [
   { to: '/employer/dashboard', label: 'Overview' },
   { to: '/employer/applicants', label: 'Applicants' },
-  { to: '/employer/post-job', label: 'Post job' }
+  { to: '/employer/post-job', label: 'Post job' },
+  { to: '/employer/profile', label: 'Organization Profile' }
 ];
 
 export default function ApplicantsPipeline() {
-  const [candidates, setCandidates] = useState<Candidate[]>(initialCandidates);
+  const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [jobs, setJobs] = useState<{ id: string, title: string }[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | undefined>();
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
   const [toastMessage, setToastMessage] = useState<string>('');
   const [toastOpen, setToastOpen] = useState(false);
+  const [selectedJobId, setSelectedJobId] = useState<string>(searchParams.get('jobId') || '');
 
-  const handleMove = (id: string, status: JobStage) => {
+  // Update URL when filter changes
+  useEffect(() => {
+    if (selectedJobId) {
+      setSearchParams({ jobId: selectedJobId });
+    }
+  }, [selectedJobId, setSearchParams]);
+
+  useEffect(() => {
+    async function fetchData() {
+      if (!user) return;
+      setLoading(true);
+      try {
+        // Get Org ID
+        const { data: org, error: orgError } = await supabase
+          .from('organizations')
+          .select('id')
+          .eq('owner_user_id', user.id)
+          .single();
+
+        if (orgError) throw orgError;
+        if (org) {
+          // Fetch candidates and jobs in parallel
+          const [candidatesData, jobsData] = await Promise.all([
+            getCandidatesForOrg(org.id),
+            supabase.from('jobs').select('id, title').eq('org_id', org.id).eq('status', 'published').order('created_at', { ascending: false })
+          ]);
+
+          setCandidates(candidatesData);
+
+          if (jobsData.data && jobsData.data.length > 0) {
+            setJobs(jobsData.data);
+
+            // Determine initial job selection
+            const urlJobId = searchParams.get('jobId');
+            const isValidJob = urlJobId && jobsData.data.some(j => j.id === urlJobId);
+
+            if (isValidJob) {
+              setSelectedJobId(urlJobId!);
+            } else {
+              // Default to first job (most recent due to order) if no valid ID in URL
+              setSelectedJobId(jobsData.data[0].id);
+            }
+          } else {
+            setJobs([]);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching candidates:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
+  }, [user]);
+
+  const handleMove = async (id: string, status: JobStage) => {
+    // Optimistic update
+    const previousCandidates = [...candidates];
     setCandidates((prev) =>
       prev.map((c) => {
         if (c.id !== id) return c;
@@ -35,6 +101,15 @@ export default function ApplicantsPipeline() {
         return { ...c, status };
       })
     );
+
+    try {
+      await updateApplicationStatus(id, status.toLowerCase() as any, user!.id);
+    } catch (error) {
+      console.error('Error updating status:', error);
+      setCandidates(previousCandidates); // Revert
+      setToastMessage('Failed to update status');
+      setToastOpen(true);
+    }
   };
 
   const toggleFavorite = (id: string) => {
@@ -50,18 +125,29 @@ export default function ApplicantsPipeline() {
     });
   };
 
-  const appliedCount = candidates.filter((c) => c.status === 'Applied').length;
-  const interviewCount = candidates.filter((c) => c.status === 'Interview').length;
-  const shortlistedCount = candidates.filter((c) => c.status === 'Shortlisted').length;
-  const offerCount = candidates.filter((c) => c.status === 'Offer').length;
-  const recent = candidates.slice(0, 5);
+  // Filter candidates based on selected job - strict filter
+  const filteredCandidates = candidates.filter(c => c.jobId === selectedJobId);
+
+  const appliedCount = filteredCandidates.filter((c) => c.status === 'Applied').length;
+  const interviewCount = filteredCandidates.filter((c) => c.status === 'Interview').length;
+  const shortlistedCount = filteredCandidates.filter((c) => c.status === 'Shortlisted').length;
+  const offerCount = filteredCandidates.filter((c) => c.status === 'Offer').length;
+  const recent = filteredCandidates.slice(0, 5);
+
+  if (loading) {
+    return (
+      <DashboardShell sidebarLinks={sidebarLinks} title="Applicants pipeline" subtitle="Loading..." hideNavigation>
+        <p className="p-8 text-center text-gray-500">Loading pipeline...</p>
+      </DashboardShell>
+    );
+  }
 
   return (
     <DashboardShell
       sidebarLinks={sidebarLinks}
       title="Applicants pipeline"
       subtitle="Move candidates between stages or open profile details."
-      actions={<Badge variant="info">{candidates.length} candidates</Badge>}
+      actions={<Badge variant="info">{filteredCandidates.length} candidates</Badge>}
       hideNavigation
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -80,6 +166,19 @@ export default function ApplicantsPipeline() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap gap-2">
             <Input placeholder="Search candidates..." className="min-w-[220px]" />
+
+            <Select
+              className="min-w-[200px]"
+              value={selectedJobId}
+              onChange={(e) => setSelectedJobId(e.target.value)}
+              disabled={jobs.length === 0}
+            >
+              {jobs.map(job => (
+                <option key={job.id} value={job.id}>{job.title}</option>
+              ))}
+              {jobs.length === 0 && <option value="">No active jobs</option>}
+            </Select>
+
             <Select className="min-w-[160px]" defaultValue="">
               <option value="">All stages</option>
               <option>Applied</option>
@@ -91,7 +190,7 @@ export default function ApplicantsPipeline() {
             </Select>
           </div>
           <div className="text-xs text-gray-500">
-            Updated just now - {candidates.length} total
+            Updated just now - {filteredCandidates.length} total
           </div>
         </div>
       </Card>
@@ -130,7 +229,7 @@ export default function ApplicantsPipeline() {
           </div>
           <div className="mt-4">
             <KanbanBoard
-              candidates={candidates}
+              candidates={filteredCandidates}
               onMove={handleMove}
               onView={setSelectedCandidate}
               favorites={favoriteIds}
@@ -143,7 +242,7 @@ export default function ApplicantsPipeline() {
           <Card className="p-4">
             <p className="text-sm font-semibold text-gray-900">Recent candidates</p>
             <div className="mt-3 space-y-3">
-              {recent.map((candidate) => (
+              {recent.length === 0 ? <p className="text-sm text-gray-500">No recent candidates for this job.</p> : recent.map((candidate) => (
                 <button
                   key={candidate.id}
                   onClick={() => setSelectedCandidate(candidate)}
@@ -152,6 +251,7 @@ export default function ApplicantsPipeline() {
                   <div>
                     <p className="font-semibold text-gray-900">{candidate.name}</p>
                     <p className="text-xs text-gray-500">{candidate.school}</p>
+                    <p className="text-[10px] text-gray-400">For: {candidate.jobTitle}</p>
                   </div>
                   <Badge variant="outline">{candidate.status}</Badge>
                 </button>

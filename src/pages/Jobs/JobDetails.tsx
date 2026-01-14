@@ -9,7 +9,7 @@ import { Building2, MapPin, Share2, ShieldCheck, Sparkles, Star, Wallet } from '
 import { Job } from '../../lib/types';
 import { timeAgo } from '../../lib/utils';
 import { Breadcrumbs } from '../../components/Breadcrumbs';
-import { getJobById, getJobs } from '../../lib/api/jobs';
+import { getJobById, getJobs, saveJob, unsaveJob, getSavedJobs } from '../../lib/api/jobs';
 import { getUserDocuments } from '../../lib/api/profiles';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -22,16 +22,30 @@ export default function JobDetails() {
   const [resumes, setResumes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showApply, setShowApply] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
 
   useEffect(() => {
     async function loadJob() {
       if (!id) return;
       try {
         setLoading(true);
-        const jobData = await getJobById(id);
+
+        // Fetch job and saved status in parallel
+        const [jobData, savedJobs] = await Promise.all([
+          getJobById(id),
+          user && userRole === 'seeker' ? getSavedJobs(user.id) : Promise.resolve([])
+        ]);
+
         setJob(jobData);
-        
+
         if (jobData) {
+          // Check if saved
+          if (savedJobs.some(s => s.id === id)) {
+            setIsSaved(true);
+          } else {
+            setIsSaved(false);
+          }
+
           // Load similar jobs (same specialty tags)
           const allJobs = await getJobs({ status: 'published' });
           const similar = allJobs
@@ -46,25 +60,47 @@ export default function JobDetails() {
       }
     }
     loadJob();
-  }, [id]);
+  }, [id, user, userRole]);
 
   useEffect(() => {
     async function loadResumes() {
       try {
-        // TODO: Get current user ID from auth context
-        // const userId = 'current-user-id';
-        // const docs = await getUserDocuments(userId);
-        // setResumes(docs);
+        if (user && userRole === 'seeker') {
+          const docs = await getUserDocuments(user.id);
+          setResumes(docs);
+        }
       } catch (error) {
         console.error('Error loading resumes:', error);
       }
     }
     loadResumes();
-  }, []);
+  }, [user, userRole]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0 });
   }, [id]);
+
+  const handleToggleSave = async () => {
+    if (!job) return;
+    if (!user || userRole !== 'seeker') {
+      openAuthModal('login', window.location.pathname);
+      return;
+    }
+
+    const newSavedState = !isSaved;
+    setIsSaved(newSavedState); // Optimistic
+
+    try {
+      if (newSavedState) {
+        await saveJob(user.id, job.id);
+      } else {
+        await unsaveJob(user.id, job.id);
+      }
+    } catch (error) {
+      console.error('Error toggling save:', error);
+      setIsSaved(!newSavedState); // Revert
+    }
+  };
 
   if (loading) {
     return (
@@ -216,7 +252,12 @@ export default function JobDetails() {
               >
                 Quick apply
               </Button>
-              <Button variant="outline">Save job</Button>
+              <Button
+                variant={isSaved ? "primary" : "outline"}
+                onClick={handleToggleSave}
+              >
+                {isSaved ? 'Saved' : 'Save job'}
+              </Button>
               <Button variant="ghost" icon={<Share2 className="h-4 w-4" />}>
                 Share
               </Button>

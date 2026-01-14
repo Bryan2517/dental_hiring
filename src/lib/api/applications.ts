@@ -7,13 +7,22 @@ type ProfileRow = Database['public']['Tables']['profiles']['Row'];
 type SeekerProfileRow = Database['public']['Tables']['seeker_profiles']['Row'];
 
 // Helper to map database application to frontend Application type
-function mapApplicationToFrontend(app: ApplicationRow, profile: ProfileRow | null): Application {
+// Helper to map database application to frontend Application type
+function mapApplicationToFrontend(
+  app: ApplicationRow,
+  profile: ProfileRow | null,
+  job?: any
+): Application {
+  const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
   return {
     id: app.id,
     jobId: app.job_id,
-    status: app.status as JobStage,
+    status: capitalize(app.status) as JobStage,
     appliedAt: app.created_at,
     candidateName: profile?.full_name || 'Unknown',
+    jobTitle: job?.title || 'Unknown Job',
+    clinicName: job?.organizations?.org_name || 'Unknown Clinic',
+    location: job?.city || job?.organizations?.city || '',
   };
 }
 
@@ -21,20 +30,24 @@ function mapApplicationToFrontend(app: ApplicationRow, profile: ProfileRow | nul
 function mapApplicationToCandidate(
   app: ApplicationRow,
   profile: ProfileRow | null,
-  seekerProfile: SeekerProfileRow | null
+  seekerProfile: SeekerProfileRow | null,
+  job?: { title: string } | null
 ): Candidate {
   const skills: string[] = [];
-  
+  const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
   return {
     id: app.id,
     name: profile?.full_name || 'Unknown',
     school: seekerProfile?.school_name || 'Unknown',
     gradDate: seekerProfile?.expected_graduation_date || '',
     skills,
-    status: app.status as JobStage,
+    status: capitalize(app.status) as JobStage,
     rating: 4.0, // Default rating, can be calculated later
     city: profile?.city || '',
     notes: app.employer_notes || undefined,
+    jobId: app.job_id,
+    jobTitle: job?.title || 'Unknown Role'
   };
 }
 
@@ -52,35 +65,45 @@ export async function getApplications(filters?: {
         id,
         full_name,
         city
+      ),
+      jobs!applications_job_id_fkey (
+        title,
+        city,
+        organizations (
+          org_name,
+          city,
+          state
+        )
       )
     `);
-  
+
   if (filters?.job_id) {
     query = query.eq('job_id', filters.job_id);
   }
-  
+
   if (filters?.org_id) {
     query = query.eq('org_id', filters.org_id);
   }
-  
+
   if (filters?.seeker_user_id) {
     query = query.eq('seeker_user_id', filters.seeker_user_id);
   }
-  
+
   if (filters?.status) {
     query = query.eq('status', filters.status);
   }
-  
+
   const { data, error } = await query.order('created_at', { ascending: false });
-  
+
   if (error) {
     console.error('Error fetching applications:', error);
     throw error;
   }
-  
+
   return (data || []).map((item) => {
     const profile = Array.isArray(item.profiles) ? item.profiles[0] : item.profiles;
-    return mapApplicationToFrontend(item, profile);
+    const job = Array.isArray(item.jobs) ? item.jobs[0] : item.jobs;
+    return mapApplicationToFrontend(item, profile, job);
   });
 }
 
@@ -92,24 +115,32 @@ export async function getCandidatesForOrg(orgId: string): Promise<Candidate[]> {
       profiles!applications_seeker_user_id_fkey (
         id,
         full_name,
-        city
+        city,
+        seeker_profiles (
+          school_name,
+          expected_graduation_date
+        )
       ),
-      seeker_profiles!applications_seeker_user_id_fkey (
-        school_name,
-        expected_graduation_date
+      jobs!applications_job_id_fkey (
+        title
       )
     `)
     .eq('org_id', orgId);
-  
+
   if (error) {
     console.error('Error fetching candidates:', error);
     throw error;
   }
-  
+
   return (data || []).map((item) => {
     const profile = Array.isArray(item.profiles) ? item.profiles[0] : item.profiles;
-    const seekerProfile = Array.isArray(item.seeker_profiles) ? item.seeker_profiles[0] : item.seeker_profiles;
-    return mapApplicationToCandidate(item, profile, seekerProfile);
+    // seeker_profiles is now nested inside profile
+    const seekerProfile = profile && 'seeker_profiles' in profile
+      ? (Array.isArray(profile.seeker_profiles) ? profile.seeker_profiles[0] : profile.seeker_profiles)
+      : null;
+    const job = Array.isArray(item.jobs) ? item.jobs[0] : item.jobs;
+
+    return mapApplicationToCandidate(item, profile, seekerProfile as SeekerProfileRow | null, job);
   });
 }
 
@@ -138,12 +169,22 @@ export async function createApplication(applicationData: {
       )
     `)
     .single();
-  
+
   if (error) {
     console.error('Error creating application:', error);
     throw error;
   }
-  
+
+  // Create application event
+  await supabase
+    .from('application_events')
+    .insert({
+      application_id: data.id,
+      actor_user_id: applicationData.seeker_user_id,
+      event_type: 'status_change',
+      payload: { status: data.status },
+    });
+
   const profile = Array.isArray(data.profiles) ? data.profiles[0] : data.profiles;
   return mapApplicationToFrontend(data, profile);
 }
@@ -160,12 +201,12 @@ export async function updateApplicationStatus(
       updated_at: new Date().toISOString(),
     })
     .eq('id', id);
-  
+
   if (updateError) {
     console.error('Error updating application:', updateError);
     throw updateError;
   }
-  
+
   // Create application event
   await supabase
     .from('application_events')

@@ -7,6 +7,8 @@ import { Textarea } from './ui/textarea';
 import { Toast } from './ui/toast';
 import { Job, Resume } from '../lib/types';
 import { useAuth } from '../contexts/AuthContext';
+import { createApplication } from '../lib/api/applications';
+import { createDocument, uploadResumeFile } from '../lib/api/profiles';
 
 interface ApplyModalProps {
   open: boolean;
@@ -17,10 +19,15 @@ interface ApplyModalProps {
 
 export function ApplyModal({ open, job, onClose, resumes }: ApplyModalProps) {
   const { user, userRole, openAuthModal } = useAuth();
-  const [selectedResume, setSelectedResume] = useState<string>(resumes[0]?.id ?? '');
+  const [selectedResume, setSelectedResume] = useState<string>('');
   const [uploadedFile, setUploadedFile] = useState<string>('');
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState({ title: '', description: '', variant: 'success' as 'success' | 'error' });
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Filter out resumes with invalid UUIDs
+  const validResumes = resumes.filter(r => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(r.id));
 
   useEffect(() => {
     // If modal opens but user is not authenticated or not a seeker, redirect to login
@@ -30,24 +37,101 @@ export function ApplyModal({ open, job, onClose, resumes }: ApplyModalProps) {
     }
   }, [open, user, userRole, openAuthModal, onClose, job]);
 
-  const handleSubmit = () => {
-    if (!user || userRole !== 'seeker') {
-      openAuthModal('login', job ? `/jobs/${job.id}` : '/jobs');
-      onClose();
+  const handleSubmit = async () => {
+    if (!user || userRole !== 'seeker' || !job) return;
+
+    // Validate inputs
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const hasNewFile = fileInput?.files && fileInput.files.length > 0;
+
+    if (!selectedResume && !hasNewFile) {
+      setToastMessage({
+        title: 'Resume required',
+        description: 'Please select an existing resume or upload a new one.',
+        variant: 'error'
+      });
+      setShowToast(true);
       return;
     }
 
-    setShowToast(true);
-    setTimeout(() => {
-      setShowToast(false);
-      onClose();
-    }, 1500);
+    // Validate UUID if using existing resume
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (selectedResume && !uuidRegex.test(selectedResume)) {
+      setToastMessage({
+        title: 'Invalid Resume',
+        description: 'The selected resume has an invalid ID. Please upload a new one.',
+        variant: 'error'
+      });
+      setShowToast(true);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      let resumeDocId = selectedResume;
+
+      // Handle file upload if new file is selected
+      if (hasNewFile && fileInput.files?.[0]) {
+        const file = fileInput.files[0];
+        const storagePath = await uploadResumeFile(file, user.id);
+        const newDoc = await createDocument({
+          user_id: user.id,
+          title: file.name,
+          storage_path: storagePath,
+          doc_type: 'resume',
+          is_default: true // Set as default as requested
+        });
+        resumeDocId = newDoc.id;
+      }
+
+      await createApplication({
+        job_id: job.id,
+        org_id: job.orgId,
+        seeker_user_id: user.id,
+        resume_doc_id: resumeDocId,
+        screening_answers: answers,
+      });
+
+      setToastMessage({
+        title: 'Application submitted',
+        description: 'The clinic will review your profile.',
+        variant: 'success'
+      });
+      setShowToast(true);
+
+      setTimeout(() => {
+        setShowToast(false);
+        onClose();
+        // Reset form
+        setAnswers({});
+        setUploadedFile('');
+        setSelectedResume('');
+        if (fileInput) fileInput.value = '';
+      }, 1500);
+    } catch (error) {
+      console.error('Application error:', error);
+      setToastMessage({
+        title: 'Submission failed',
+        description: 'There was an error submitting your application. Please try again.',
+        variant: 'error'
+      });
+      setShowToast(true);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleUpload = (fileName: string) => {
-    setUploadedFile(fileName);
-    setSelectedResume('');
-  };
+  // Auto-select default resume
+  useEffect(() => {
+    if (open && validResumes.length > 0) {
+      const defaultResume = validResumes.find(r => r.isDefault);
+      if (defaultResume) {
+        setSelectedResume(defaultResume.id);
+      } else if (!selectedResume) {
+        setSelectedResume(validResumes[0].id);
+      }
+    }
+  }, [open, validResumes]);
 
   // Don't render modal if user is not authenticated
   if (!user || userRole !== 'seeker') {
@@ -58,31 +142,36 @@ export function ApplyModal({ open, job, onClose, resumes }: ApplyModalProps) {
     <>
       <Modal open={open} onClose={onClose} title={`Quick Apply${job ? ` - ${job.roleType}` : ''}`}>
         <div className="space-y-4">
-          <Select
-            label="Select resume"
-            value={selectedResume}
-            onChange={(e) => setSelectedResume(e.target.value)}
-          >
-            <option value="">Choose a resume</option>
-            {resumes.map((res) => (
-              <option key={res.id} value={res.id}>
-                {res.name}
-              </option>
-            ))}
-          </Select>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700">Resume</label>
+            <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+              <span className="truncate">
+                {selectedResume
+                  ? validResumes.find(r => r.id === selectedResume)?.name || 'Default Resume'
+                  : 'No resume selected'}
+              </span>
+              <span className="text-xs font-semibold text-brand bg-brand/10 px-2 py-0.5 rounded-full">
+                {selectedResume && validResumes.find(r => r.id === selectedResume)?.isDefault ? 'Default' : ''}
+              </span>
+            </div>
+          </div>
 
           <div className="rounded-xl border border-dashed border-brand/40 bg-brand/5 p-4">
-            <p className="text-sm font-semibold text-gray-800">Upload a new resume (mock)</p>
-            <p className="text-xs text-gray-600">Simulated upload; file stored in local state only.</p>
+            <p className="text-sm font-semibold text-gray-800">Upload a new resume</p>
+            <p className="text-xs text-gray-600">Supported formats: PDF, DOCX (Max 5MB)</p>
             <label className="mt-3 flex cursor-pointer items-center gap-2 rounded-lg bg-white px-4 py-3 text-sm font-semibold text-brand shadow-sm transition hover:bg-brand/10">
               <UploadCloud className="h-4 w-4" />
               <span>{uploadedFile || 'Choose file'}</span>
               <input
                 type="file"
                 className="hidden"
+                accept=".pdf,.doc,.docx"
                 onChange={(e) => {
-                  const name = e.target.files?.[0]?.name;
-                  if (name) handleUpload(name);
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    setUploadedFile(file.name);
+                    setSelectedResume(''); // Clear selection when uploading new
+                  }
                 }}
               />
             </label>
@@ -91,7 +180,7 @@ export function ApplyModal({ open, job, onClose, resumes }: ApplyModalProps) {
           <div className="grid gap-3">
             <Textarea
               label="Have you assisted in 4-hand dentistry?"
-              placeholder="Share your experience (mock response)"
+              placeholder="Share your experience..."
               value={answers.q1 || ''}
               onChange={(e) => setAnswers({ ...answers, q1: e.target.value })}
             />
@@ -104,11 +193,11 @@ export function ApplyModal({ open, job, onClose, resumes }: ApplyModalProps) {
           </div>
 
           <div className="flex items-center justify-end gap-2">
-            <Button variant="ghost" onClick={onClose}>
+            <Button variant="ghost" onClick={onClose} disabled={isLoading}>
               Cancel
             </Button>
-            <Button variant="primary" onClick={handleSubmit}>
-              Submit application (mock)
+            <Button variant="primary" onClick={handleSubmit} disabled={isLoading}>
+              {isLoading ? 'Submitting...' : 'Submit Application'}
             </Button>
           </div>
         </div>
@@ -116,9 +205,9 @@ export function ApplyModal({ open, job, onClose, resumes }: ApplyModalProps) {
       <Toast
         open={showToast}
         onClose={() => setShowToast(false)}
-        title="Application submitted (mock)"
-        description="The clinic will review your profile in this demo."
-        variant="success"
+        title={toastMessage.title}
+        description={toastMessage.description}
+        variant={toastMessage.variant}
       />
     </>
   );

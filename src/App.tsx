@@ -12,6 +12,8 @@ import About from './pages/Marketing/About';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AuthModal } from './components/AuthModal';
 
+import OrganizationProfile from './pages/Employer/OrganizationProfile';
+
 function App() {
   return (
     <>
@@ -45,6 +47,14 @@ function App() {
           element={
             <ProtectedRoute requiredRole="employer">
               <ApplicantsPipeline />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/employer/profile"
+          element={
+            <ProtectedRoute requiredRole="employer">
+              <OrganizationProfile />
             </ProtectedRoute>
           }
         />

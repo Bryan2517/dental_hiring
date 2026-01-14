@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AppShell } from '../../layouts/AppShell';
-import { Job } from '../../lib/types';
+import { Job, Resume } from '../../lib/types';
 import { JobCard } from '../../components/JobCard';
 import { JobFilters, JobFilterState } from '../../components/JobFilters';
 import { Pagination } from '../../components/Pagination';
 import { ApplyModal } from '../../components/ApplyModal';
 import { Breadcrumbs } from '../../components/Breadcrumbs';
-import { getJobs } from '../../lib/api/jobs';
+import { getJobs, saveJob, unsaveJob, getSavedJobs } from '../../lib/api/jobs';
 import { getUserDocuments } from '../../lib/api/profiles';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -31,46 +31,89 @@ export default function JobsList() {
   const [selectedJob, setSelectedJob] = useState<Job | undefined>();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
-  const [resumes, setResumes] = useState<any[]>([]);
+  const [resumes, setResumes] = useState<Resume[]>([]);
   const pageSize = 6;
+
+  const [savedJobIds, setSavedJobIds] = useState<Set<string>>(new Set());
 
   const handleApplyClick = (job: Job) => {
     if (!user || userRole !== 'seeker') {
-      openAuthModal('login', `/jobs/${job.id}`);
+      openAuthModal('login', `/jobs`);
     } else {
       setSelectedJob(job);
     }
   };
 
+  const handleToggleSave = async (job: Job) => {
+    if (!user || userRole !== 'seeker') {
+      openAuthModal('login', `/jobs`);
+      return;
+    }
+
+    const isSaved = savedJobIds.has(job.id);
+    // Optimistic update
+    setSavedJobIds(prev => {
+      const next = new Set(prev);
+      if (isSaved) next.delete(job.id);
+      else next.add(job.id);
+      return next;
+    });
+
+    try {
+      if (isSaved) {
+        await unsaveJob(user.id, job.id);
+      } else {
+        await saveJob(user.id, job.id);
+      }
+    } catch (error) {
+      console.error('Error toggling save:', error);
+      // Revert on error
+      setSavedJobIds(prev => {
+        const next = new Set(prev);
+        if (isSaved) next.add(job.id);
+        else next.delete(job.id);
+        return next;
+      });
+    }
+  };
+
   useEffect(() => {
-    async function loadJobs() {
+    async function loadData() {
       try {
         setLoading(true);
-        const jobsData = await getJobs({ status: 'published' });
+        const [jobsData, savedJobsData] = await Promise.all([
+          getJobs({ status: 'published' }),
+          user && userRole === 'seeker' ? getSavedJobs(user.id) : Promise.resolve([])
+        ]);
         setJobs(jobsData);
+        setSavedJobIds(new Set(savedJobsData.map(j => j.id)));
       } catch (error) {
         console.error('Error loading jobs:', error);
       } finally {
         setLoading(false);
       }
     }
-    loadJobs();
-  }, []);
+    loadData();
+  }, [user, userRole]);
 
   useEffect(() => {
     async function loadResumes() {
       try {
-        // TODO: Get current user ID from auth context
-        // For now, we'll use empty array
-        // const userId = 'current-user-id';
-        // const docs = await getUserDocuments(userId);
-        // setResumes(docs);
+        if (user && userRole === 'seeker') {
+          const docs = await getUserDocuments(user.id);
+          // Map to Resume type if needed, but getUserDocuments should return compatible types or we map here
+          // Assuming docs are compatible or we just use them.
+          // Let's verify type compatibility briefly. getUserDocuments returns 'any[]' in some contexts or typed.
+          // Based on previous code, we might need mapping.
+          // Checking previous JobsList content, it just used setResumes(docs).
+          setResumes(docs as unknown as Resume[]);
+        }
       } catch (error) {
         console.error('Error loading resumes:', error);
       }
     }
     loadResumes();
-  }, []);
+  }, [user, userRole]);
 
   const filteredJobs = useMemo(() => {
     let result = jobs.filter((job) => {
@@ -92,13 +135,28 @@ export default function JobsList() {
       const matchesNewGrad = !filters.newGrad || job.newGradWelcome;
       const matchesTraining = !filters.training || job.trainingProvided;
       const matchesInternship = !filters.internship || job.internshipAvailable;
+
       const salaryMatches = (() => {
         if (filters.salaryMin === 0) return true;
-        const numbers = job.salaryRange.match(/\d[\d,]*/g) ?? [];
-        const salaryMin = numbers[0] ? parseInt(numbers[0].replace(/,/g, ''), 10) : 0;
-        const salaryMax = numbers[1] ? parseInt(numbers[1].replace(/,/g, ''), 10) : salaryMin;
-        return salaryMax >= filters.salaryMin;
+
+        // Determine effective min and max salaries
+        let effectiveMin = 0;
+        let effectiveMax = 0;
+
+        if (job.salaryMin !== undefined || job.salaryMax !== undefined) {
+          effectiveMin = job.salaryMin || 0;
+          effectiveMax = job.salaryMax || effectiveMin;
+        } else {
+          // Fallback to parsing string (legacy support)
+          const numbers = job.salaryRange.match(/\d[\d,]*/g) ?? [];
+          effectiveMin = numbers[0] ? parseInt(numbers[0].replace(/,/g, ''), 10) : 0;
+          effectiveMax = numbers[1] ? parseInt(numbers[1].replace(/,/g, ''), 10) : effectiveMin;
+        }
+
+        // Check against max salary as per previous logic
+        return effectiveMax >= filters.salaryMin;
       })();
+
       return (
         matchesKeyword &&
         matchesLocation &&
@@ -169,7 +227,13 @@ export default function JobsList() {
           ) : (
             <>
               {pageJobs.map((job) => (
-                <JobCard key={job.id} job={job} onApply={handleApplyClick} />
+                <JobCard
+                  key={job.id}
+                  job={job}
+                  onApply={handleApplyClick}
+                  isSaved={savedJobIds.has(job.id)}
+                  onToggleSave={handleToggleSave}
+                />
               ))}
               {pageJobs.length === 0 && (
                 <div className="rounded-2xl border border-dashed border-gray-200 bg-white p-6 text-center text-sm text-gray-600">
@@ -183,7 +247,7 @@ export default function JobsList() {
         <Pagination page={page} totalPages={totalPages} onChange={setPage} />
       </div>
 
-      <ApplyModal open={!!selectedJob} job={selectedJob} onClose={() => setSelectedJob(undefined)} resumes={resumes} />
+      <ApplyModal open={!!selectedJob} job={selectedJob} onClose={() => setSelectedJob(undefined)} resumes={resumes as any[]} />
     </AppShell>
   );
 }

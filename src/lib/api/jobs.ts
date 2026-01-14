@@ -55,6 +55,9 @@ function mapJobToFrontend(job: JobRow, org: OrganizationRow | null): Job {
     trainingProvided: job.training_provided,
     internshipAvailable: job.internship_available || false,
     description: job.description,
+    salaryMin: job.salary_min || undefined,
+    salaryMax: job.salary_max || undefined,
+    orgId: job.org_id,
   };
 }
 
@@ -218,4 +221,62 @@ export async function updateJobStatus(id: string, status: Database['public']['En
     console.error('Error updating job status:', error);
     throw error;
   }
+}
+
+export async function saveJob(userId: string, jobId: string): Promise<void> {
+  const { error } = await supabase
+    .from('job_saves')
+    .insert({ user_id: userId, job_id: jobId });
+
+  if (error) {
+    // Ignore duplicate key error (already saved)
+    if (error.code === '23505') return;
+    console.error('Error saving job:', error);
+    throw error;
+  }
+}
+
+export async function unsaveJob(userId: string, jobId: string): Promise<void> {
+  const { error } = await supabase
+    .from('job_saves')
+    .delete()
+    .eq('user_id', userId)
+    .eq('job_id', jobId);
+
+  if (error) {
+    console.error('Error unsaving job:', error);
+    throw error;
+  }
+}
+
+export async function getSavedJobs(userId: string): Promise<Job[]> {
+  const { data, error } = await supabase
+    .from('job_saves')
+    .select(`
+      job_id,
+      jobs (
+        *,
+        organizations (
+          id,
+          org_name,
+          city,
+          country
+        )
+      )
+    `)
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching saved jobs:', error);
+    throw error;
+  }
+
+  return (data || []).map((item: any) => {
+    const job = item.jobs;
+    // Handle nested arrays if necessary (though single relation)
+    const jobData = Array.isArray(job) ? job[0] : job;
+    const org = Array.isArray(jobData.organizations) ? jobData.organizations[0] : jobData.organizations;
+    return mapJobToFrontend(jobData, org);
+  });
 }

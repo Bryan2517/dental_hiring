@@ -1,6 +1,6 @@
 import { ReactNode, useMemo } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { Briefcase, LayoutDashboard, User2, Wallet } from 'lucide-react';
+import { Briefcase, Building2Icon, LayoutDashboard, User2, UserRoundSearch, Wallet } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Role } from './RoleSwitch';
 import { Button } from './ui/button';
@@ -18,11 +18,12 @@ export function TopNav() {
   const navLinks = useMemo(() => {
     if (activeRole === 'employer') {
       return [
-        { to: '/employers', label: 'Employers Home', icon: <Briefcase className="h-4 w-4" /> },
+        { to: '/employers', label: 'Employers Home', icon: <UserRoundSearch className="h-4 w-4" /> },
         { to: '/employer/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="h-4 w-4" /> },
-        { to: '/employer/post-job', label: 'Post Job' },
-        { to: '/employer/applicants', label: 'Applicants' },
-        { to: '/employer/dashboard#wallet', label: 'Wallet', icon: <Wallet className="h-4 w-4" /> }
+        { to: '/employer/post-job', label: 'Post Job', icon: <Briefcase className="h-4 w-4" /> },
+        { to: '/employer/applicants', label: 'Applicants', icon: <User2 className="h-4 w-4" /> },
+        { to: '/employer/profile', label: 'Organization', icon: <Building2Icon className="h-4 w-4" /> },
+        // { to: '/employer/dashboard#wallet', label: 'Wallet', icon: <Wallet className="h-4 w-4" /> }
       ];
     }
     if (activeRole === 'admin') {
@@ -70,13 +71,6 @@ export function TopNav() {
               {activeRole === 'employer' ? "I'm a seeker" : "I'm an employer"}
             </Link>
           )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={user ? handleSignOut : () => openAuthModal('login')}
-          >
-            {user ? 'Sign out' : 'Sign in'}
-          </Button>
           {activeRole === 'employer' ? (
             <Link
               to="/employer/post-job"
@@ -93,6 +87,13 @@ export function TopNav() {
               Browse Jobs
             </Link>
           )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={user ? handleSignOut : () => openAuthModal('login')}
+          >
+            {user ? 'Sign out' : 'Sign in'}
+          </Button>
         </div>
       </div>
     </header>

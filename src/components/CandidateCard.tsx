@@ -18,13 +18,19 @@ export function CandidateCard({
   draggable
 }: CandidateCardProps) {
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={() => onView(candidate)}
       draggable={draggable}
       onDragStart={(event) => {
         event.dataTransfer.setData('text/plain', candidate.id);
         event.dataTransfer.effectAllowed = 'move';
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          onView(candidate);
+        }
       }}
       className="relative flex w-full flex-col gap-3 rounded-2xl border border-gray-100 bg-white p-4 text-left shadow-sm transition hover:border-brand/40 hover:shadow-md overflow-hidden cursor-grab active:cursor-grabbing"
     >
@@ -57,6 +63,6 @@ export function CandidateCard({
         ))}
         {candidate.skills.length > 2 && <TagPill label={`+${candidate.skills.length - 2} more`} />}
       </div>
-    </button>
+    </div>
   );
 }

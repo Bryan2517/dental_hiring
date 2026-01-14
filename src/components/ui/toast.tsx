@@ -8,7 +8,7 @@ interface ToastProps {
   onClose: () => void;
   title: string;
   description?: ReactNode;
-  variant?: 'success' | 'info' | 'warning';
+  variant?: 'success' | 'info' | 'warning' | 'error';
   duration?: number;
 }
 
@@ -31,7 +31,8 @@ export function Toast({
   const colors: Record<typeof variant, string> = {
     success: 'bg-emerald-50 text-emerald-900 border border-emerald-100',
     info: 'bg-blue-50 text-blue-900 border border-blue-100',
-    warning: 'bg-amber-50 text-amber-900 border border-amber-100'
+    warning: 'bg-amber-50 text-amber-900 border border-amber-100',
+    error: 'bg-red-50 text-red-900 border border-red-100'
   };
 
   return ReactDOM.createPortal(

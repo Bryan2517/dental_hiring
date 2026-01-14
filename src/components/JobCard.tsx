@@ -1,18 +1,21 @@
 import { Link, useNavigate } from 'react-router-dom';
 import type { KeyboardEvent } from 'react';
-import { Building2, MapPin, Sparkles, Star } from 'lucide-react';
+import { Building2, MapPin, Sparkles, Star, Bookmark } from 'lucide-react';
 import { Job } from '../lib/types';
 import { Badge } from './ui/badge';
 import { TagPill } from './TagPill';
 import { Button } from './ui/button';
 import { timeAgo } from '../lib/utils';
+import { cn } from '../lib/utils';
 
 interface JobCardProps {
   job: Job;
   onApply?: (job: Job) => void;
+  isSaved?: boolean;
+  onToggleSave?: (job: Job) => void;
 }
 
-export function JobCard({ job, onApply }: JobCardProps) {
+export function JobCard({ job, onApply, isSaved, onToggleSave }: JobCardProps) {
   const navigate = useNavigate();
   const goToDetails = () => navigate(`/jobs/${job.id}`);
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -24,13 +27,28 @@ export function JobCard({ job, onApply }: JobCardProps) {
 
   return (
     <div
-      className="flex flex-col gap-4 rounded-3xl border border-gray-100 bg-white/90 p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg focus-within:ring-2 focus-within:ring-brand/30 cursor-pointer"
+      className="relative flex flex-col gap-4 rounded-3xl border border-gray-100 bg-white/90 p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg focus-within:ring-2 focus-within:ring-brand/30 cursor-pointer group"
       onClick={goToDetails}
       onKeyDown={handleKeyDown}
       role="button"
       tabIndex={0}
     >
-      <div className="flex items-start justify-between gap-3">
+      <div className="absolute top-6 right-6 z-10">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleSave?.(job);
+          }}
+          className={cn(
+            "rounded-full p-2 transition-colors hover:bg-gray-100",
+            isSaved ? "text-brand" : "text-gray-400 hover:text-gray-600"
+          )}
+        >
+          <Bookmark className={cn("h-5 w-5", isSaved && "fill-current")} />
+        </button>
+      </div>
+
+      <div className="flex items-start justify-between gap-3 pr-12">
         <div className="space-y-1">
           <p className="inline-flex items-center gap-2 rounded-full bg-brand/10 px-3 py-1 text-xs font-semibold text-brand">
             {job.roleType}

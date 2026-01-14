@@ -8,13 +8,16 @@ import { Checkbox } from '../../components/ui/checkbox';
 import { Badge } from '../../components/ui/badge';
 import { TagPill } from '../../components/TagPill';
 import { Button } from '../../components/ui/button';
+import { JobCard } from '../../components/JobCard';
 import { JobStage, Resume } from '../../lib/types';
 import { formatDate } from '../../lib/utils';
+import { getSavedJobs, unsaveJob } from '../../lib/api/jobs';
 import { Breadcrumbs } from '../../components/Breadcrumbs';
 import { UploadCloud } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { Database } from '../../lib/database.types';
+import { getApplications } from '../../lib/api/applications';
 
 const sidebarLinks = [
   { to: '/student/profile', label: 'Profile' },
@@ -108,8 +111,17 @@ export default function ProfileDashboard() {
             url: d.storage_path // Or construct full URL if needed
           }));
           setResumes(mappedResumes);
+          setResumes(mappedResumes);
           setLatestResume(mappedResumes[0] || null);
         }
+
+        // 3. Fetch Applications
+        const apps = await getApplications({ seeker_user_id: user!.id });
+        setApplications(apps);
+
+        // 4. Fetch Saved Jobs
+        const saved = await getSavedJobs(user!.id);
+        setSavedJobs(saved);
 
       } catch (err) {
         console.error('Unexpected error fetching dashboard data:', err);
@@ -382,12 +394,37 @@ export default function ProfileDashboard() {
               <p className="text-sm text-gray-500 text-center py-4">No applications found.</p>
             ) : (
               filteredApplications.map((app) => (
-                <div key={app.id}>Application Item</div>
+                <div key={app.id} className="rounded-xl border border-gray-100 bg-white p-4 transition hover:border-brand/40 hover:shadow-sm">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h4 className="font-semibold text-gray-900">{app.jobTitle}</h4>
+                      <div className="mt-1 flex flex-col gap-0.5 text-sm text-gray-500">
+                        <span className="font-medium text-gray-700">{app.clinicName}</span>
+                        <span>{app.location}</span>
+                      </div>
+                      <div className="mt-3 flex items-center gap-2 text-xs text-gray-400">
+                        <span>Applied {formatDate(app.appliedAt)}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <Badge variant={
+                        app.status === 'Applied' ? 'default' :
+                          app.status === 'Shortlisted' ? 'info' :
+                            app.status === 'Interview' ? 'warning' :
+                              app.status === 'Offer' ? 'success' :
+                                'default'
+                      }>
+                        {app.status}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
               ))
             )}
           </div>
         </div>
       )}
+
 
       {activeTab === 'saved' && (
         <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
@@ -397,7 +434,18 @@ export default function ProfileDashboard() {
               <p className="text-sm text-gray-500">No saved jobs yet.</p>
             ) : (
               savedJobs.map((job) => (
-                <div key={job.id}>Job Item</div>
+                <JobCard
+                  key={job.id}
+                  job={job}
+                  onApply={() => { }}
+                  isSaved={true}
+                  onToggleSave={async (j) => {
+                    if (window.confirm('Remove from saved jobs?')) {
+                      await unsaveJob(user!.id, j.id);
+                      setSavedJobs(prev => prev.filter(p => p.id !== j.id));
+                    }
+                  }}
+                />
               ))
             )}
           </div>

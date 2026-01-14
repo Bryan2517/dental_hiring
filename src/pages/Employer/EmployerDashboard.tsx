@@ -13,6 +13,7 @@ const sidebarLinks = [
   { to: '/employer/dashboard', label: 'Overview' },
   { to: '/employer/post-job', label: 'Post job' },
   { to: '/employer/applicants', label: 'Applicants' },
+  { to: '/employer/profile', label: 'Organization Profile' },
   { to: '/jobs', label: 'Job board' }
 ];
 

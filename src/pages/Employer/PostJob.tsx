@@ -15,7 +15,8 @@ import { supabase } from '../../lib/supabase';
 const sidebarLinks = [
   { to: '/employer/dashboard', label: 'Overview' },
   { to: '/employer/post-job', label: 'Post job' },
-  { to: '/employer/applicants', label: 'Applicants' }
+  { to: '/employer/applicants', label: 'Applicants' },
+  { to: '/employer/profile', label: 'Organization Profile' }
 ];
 
 const steps = [

@@ -17,13 +17,31 @@ function mapDocumentToResume(doc: SeekerDocumentRow): Resume {
     license: 'Certificate',
     other: 'Other',
   };
-  
+
   return {
     id: doc.id,
     name: doc.title,
     uploadedAt: doc.created_at,
     category: categoryMap[doc.doc_type] || 'Other',
+    isDefault: doc.is_default,
   };
+}
+
+export async function uploadResumeFile(file: File, userId: string): Promise<string> {
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${userId}/${Math.random().toString(36).substring(2)}.${fileExt}`;
+  const filePath = `${fileName}`;
+
+  const { error } = await supabase.storage
+    .from('resumes')
+    .upload(filePath, file);
+
+  if (error) {
+    console.error('Error uploading file:', error);
+    throw error;
+  }
+
+  return filePath;
 }
 
 export async function getProfile(userId: string): Promise<ProfileRow | null> {
@@ -32,12 +50,12 @@ export async function getProfile(userId: string): Promise<ProfileRow | null> {
     .select('*')
     .eq('id', userId)
     .single();
-  
+
   if (error) {
     console.error('Error fetching profile:', error);
     return null;
   }
-  
+
   return data;
 }
 
@@ -47,12 +65,12 @@ export async function getSeekerProfile(userId: string): Promise<SeekerProfileRow
     .select('*')
     .eq('user_id', userId)
     .single();
-  
+
   if (error) {
     console.error('Error fetching seeker profile:', error);
     return null;
   }
-  
+
   return data;
 }
 
@@ -64,7 +82,7 @@ export async function updateProfile(userId: string, updates: Partial<ProfileRow>
       updated_at: new Date().toISOString(),
     })
     .eq('id', userId);
-  
+
   if (error) {
     console.error('Error updating profile:', error);
     throw error;
@@ -79,7 +97,7 @@ export async function updateSeekerProfile(userId: string, updates: Partial<Seeke
       updated_at: new Date().toISOString(),
     })
     .eq('user_id', userId);
-  
+
   if (error) {
     console.error('Error updating seeker profile:', error);
     throw error;
@@ -92,13 +110,15 @@ export async function getUserDocuments(userId: string): Promise<Resume[]> {
     .select('*')
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
-  
+
   if (error) {
     console.error('Error fetching documents:', error);
     throw error;
   }
-  
-  return (data || []).map(mapDocumentToResume);
+
+  return (data || [])
+    .map(mapDocumentToResume)
+    .filter(doc => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(doc.id));
 }
 
 export async function createDocument(documentData: {
@@ -113,12 +133,12 @@ export async function createDocument(documentData: {
     .insert(documentData)
     .select()
     .single();
-  
+
   if (error) {
     console.error('Error creating document:', error);
     throw error;
   }
-  
+
   return mapDocumentToResume(data);
 }
 
@@ -128,11 +148,11 @@ export async function getUserOrganization(userId: string): Promise<OrganizationR
     .select('*')
     .eq('owner_user_id', userId)
     .single();
-  
+
   if (error) {
     console.error('Error fetching organization:', error);
     return null;
   }
-  
+
   return data;
 }

@@ -152,7 +152,7 @@ export function JobFilters({ values, onChange, onReset, sortBy, onSortChange, co
             <div className="flex items-center justify-between text-xs font-semibold text-gray-500">
               <span>Minimum salary</span>
               <span className="text-gray-900">
-                {values.salaryMin === 0 ? 'Any' : `$${values.salaryMin.toLocaleString()}`}
+                {values.salaryMin === 0 ? 'Any' : `MYR ${values.salaryMin.toLocaleString()}`}
               </span>
             </div>
             <input
