@@ -33,20 +33,22 @@ export function JobCard({ job, onApply, isSaved, onToggleSave }: JobCardProps) {
       role="button"
       tabIndex={0}
     >
-      <div className="absolute top-6 right-6 z-10">
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleSave?.(job);
-          }}
-          className={cn(
-            "rounded-full p-2 transition-colors hover:bg-gray-100",
-            isSaved ? "text-brand" : "text-gray-400 hover:text-gray-600"
-          )}
-        >
-          <Bookmark className={cn("h-5 w-5", isSaved && "fill-current")} />
-        </button>
-      </div>
+      {onToggleSave && (
+        <div className="absolute top-6 right-6 z-10">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleSave(job);
+            }}
+            className={cn(
+              "rounded-full p-2 transition-colors hover:bg-gray-100",
+              isSaved ? "text-brand" : "text-gray-400 hover:text-gray-600"
+            )}
+          >
+            <Bookmark className={cn("h-5 w-5", isSaved && "fill-current")} />
+          </button>
+        </div>
+      )}
 
       <div className="flex items-start justify-between gap-3 pr-12">
         <div className="space-y-1">

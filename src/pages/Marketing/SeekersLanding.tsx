@@ -11,7 +11,10 @@ import { useState, useEffect } from 'react';
 import { Job } from '../../lib/types';
 import { getJobs } from '../../lib/api/jobs';
 import { supabase } from '../../lib/supabase';
-import { TrendingUp, Building2, MapPin, Users } from 'lucide-react'; // Ensure specific icons are used if needed, or keep generic
+import { TrendingUp, Building2, MapPin, Users } from 'lucide-react';
+import { getSavedJobs, saveJob, unsaveJob } from '../../lib/api/jobs';
+import { useAuth } from '../../contexts/AuthContext';
+import { Toast } from '../../components/ui/toast';
 
 const steps = [
   { title: 'Create your profile', desc: 'Highlight clinical exposure, rotations, and preferred specialties.' },
@@ -43,6 +46,66 @@ export default function SeekersLanding() {
   const [hotJobs, setHotJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { user, userRole, openAuthModal } = useAuth();
+
+  const [savedJobIds, setSavedJobIds] = useState<Set<string>>(new Set());
+  const [toastOpen, setToastOpen] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+
+  const handleToggleSave = async (job: Job) => {
+    if (!user || userRole !== 'seeker') {
+      openAuthModal('login', window.location.pathname);
+      return;
+    }
+
+    const isSaved = savedJobIds.has(job.id);
+    // Optimistic update
+    setSavedJobIds(prev => {
+      const next = new Set(prev);
+      if (isSaved) next.delete(job.id);
+      else next.add(job.id);
+      return next;
+    });
+
+    try {
+      if (isSaved) {
+        await unsaveJob(user.id, job.id);
+        setToastMessage('Job removed from saved');
+        setToastOpen(true);
+      } else {
+        await saveJob(user.id, job.id);
+        setToastMessage('Job saved successfully');
+        setToastOpen(true);
+      }
+    } catch (error) {
+      console.error('Error toggling save:', error);
+      // Revert on error
+      setSavedJobIds(prev => {
+        const next = new Set(prev);
+        if (isSaved) next.add(job.id);
+        else next.delete(job.id);
+        return next;
+      });
+      setToastMessage('Failed to update saved status');
+      setToastOpen(true);
+    }
+  };
+
+  useEffect(() => {
+    async function loadSavedJobsData() {
+      if (user && userRole === 'seeker') {
+        try {
+          const saved = await getSavedJobs(user.id);
+          setSavedJobIds(new Set(saved.map(j => j.id)));
+        } catch (error) {
+          console.error('Error loading saved jobs:', error);
+        }
+      } else {
+        setSavedJobIds(new Set());
+      }
+    }
+    loadSavedJobsData();
+  }, [user, userRole]);
 
   useEffect(() => {
     async function fetchHotRoles() {
@@ -175,7 +238,13 @@ export default function SeekersLanding() {
             </div>
           ) : (
             hotJobs.map((job) => (
-              <JobCard key={job.id} job={job} onApply={setSelectedJob} />
+              <JobCard
+                key={job.id}
+                job={job}
+                onApply={setSelectedJob}
+                isSaved={savedJobIds.has(job.id)}
+                onToggleSave={handleToggleSave}
+              />
             ))
           )}
         </div>
@@ -266,6 +335,13 @@ export default function SeekersLanding() {
           setShowApply(false);
         }}
         resumes={resumes}
+      />
+      <Toast
+        open={toastOpen}
+        onClose={() => setToastOpen(false)}
+        title={toastMessage.includes('successfully') ? 'Success' : toastMessage.includes('removed') ? 'Success' : 'Error'}
+        description={toastMessage}
+        variant={toastMessage.includes('successfully') || toastMessage.includes('removed') ? 'success' : 'error'}
       />
     </AppShell>
   );

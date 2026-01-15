@@ -9,6 +9,7 @@ import { Breadcrumbs } from '../../components/Breadcrumbs';
 import { getJobs, saveJob, unsaveJob, getSavedJobs } from '../../lib/api/jobs';
 import { getUserDocuments } from '../../lib/api/profiles';
 import { useAuth } from '../../contexts/AuthContext';
+import { Toast } from '../../components/ui/toast';
 
 const defaultFilters: JobFilterState = {
   keyword: '',
@@ -35,6 +36,8 @@ export default function JobsList() {
   const pageSize = 6;
 
   const [savedJobIds, setSavedJobIds] = useState<Set<string>>(new Set());
+  const [toastOpen, setToastOpen] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
 
   const handleApplyClick = (job: Job) => {
     if (!user || userRole !== 'seeker') {
@@ -62,8 +65,12 @@ export default function JobsList() {
     try {
       if (isSaved) {
         await unsaveJob(user.id, job.id);
+        setToastMessage('Job removed from saved');
+        setToastOpen(true);
       } else {
         await saveJob(user.id, job.id);
+        setToastMessage('Job saved successfully');
+        setToastOpen(true);
       }
     } catch (error) {
       console.error('Error toggling save:', error);
@@ -74,6 +81,8 @@ export default function JobsList() {
         else next.delete(job.id);
         return next;
       });
+      setToastMessage('Failed to update saved status');
+      setToastOpen(true);
     }
   };
 
@@ -248,6 +257,14 @@ export default function JobsList() {
       </div>
 
       <ApplyModal open={!!selectedJob} job={selectedJob} onClose={() => setSelectedJob(undefined)} resumes={resumes as any[]} />
+
+      <Toast
+        open={toastOpen}
+        onClose={() => setToastOpen(false)}
+        title={toastMessage.includes('successfully') ? 'Success' : toastMessage.includes('removed') ? 'Success' : 'Error'}
+        description={toastMessage}
+        variant={toastMessage.includes('successfully') || toastMessage.includes('removed') ? 'success' : 'error'}
+      />
     </AppShell>
   );
 }
