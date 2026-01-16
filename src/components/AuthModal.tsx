@@ -23,8 +23,9 @@ export function AuthModal() {
   const [fullName, setFullName] = useState('');
   const [role, setRole] = useState<'seeker' | 'employer'>('seeker');
   // Employer specific fields
-  const [clinicName, setClinicName] = useState('');
-  const [city, setCity] = useState('');
+  // Clinic fields removed
+  // const [clinicName, setClinicName] = useState('');
+  // const [city, setCity] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
@@ -35,8 +36,9 @@ export function AuthModal() {
       setPassword('');
       setFullName('');
       setRole('seeker');
-      setClinicName('');
-      setCity('');
+      // Clinic fields removed
+      // setClinicName('');
+      // setCity('');
       setError(null);
       setLoading(false);
       setShowSuccessToast(false);
@@ -81,10 +83,7 @@ export function AuthModal() {
 
     const metadata: Record<string, any> = {};
     if (role === 'employer') {
-      metadata.employerData = {
-        clinicName,
-        city
-      };
+      // No employer data needed for initial signup
     }
 
     const { error: authError } = await signUp(email, password, fullName, role, metadata);
@@ -150,24 +149,7 @@ export function AuthModal() {
               onChange={(event) => setPassword(event.target.value)}
               required
             />
-            {authModalMode === 'register' && role === 'employer' && (
-              <>
-                <Input
-                  label="Clinic Name"
-                  placeholder="e.g. Bright Smile Dental"
-                  value={clinicName}
-                  onChange={(event) => setClinicName(event.target.value)}
-                  required
-                />
-                <Input
-                  label="City"
-                  placeholder="e.g. Kuala Lumpur"
-                  value={city}
-                  onChange={(event) => setCity(event.target.value)}
-                  required
-                />
-              </>
-            )}
+            {/* Clinic fields removed for decoupled signup */}
 
             {authModalMode === 'register' && (
               <div>

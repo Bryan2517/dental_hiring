@@ -1,6 +1,6 @@
 import { ReactNode, useMemo, useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { Briefcase, Building2Icon, LayoutDashboard, User2, UserRoundSearch, Wallet } from 'lucide-react';
+import { Briefcase, Building2Icon, LayoutDashboard, User2, UserRoundSearch, Wallet, LogIn, LogOut } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Role } from './RoleSwitch';
 import { Button } from './ui/button';
@@ -24,7 +24,7 @@ export function TopNav() {
         { to: '/employer/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="h-4 w-4" /> },
         { to: '/employer/post-job', label: 'Post Job', icon: <Briefcase className="h-4 w-4" /> },
         { to: '/employer/applicants', label: 'Applicants', icon: <User2 className="h-4 w-4" /> },
-        { to: '/employer/profile', label: 'Organization', icon: <Building2Icon className="h-4 w-4" /> },
+        { to: '/employer/organization', label: 'Organization', icon: <Building2Icon className="h-4 w-4" /> },
         // { to: '/employer/dashboard#wallet', label: 'Wallet', icon: <Wallet className="h-4 w-4" /> }
       ];
     }
@@ -98,13 +98,40 @@ export function TopNav() {
                 Browse Jobs
               </Link>
             )}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={user ? handleSignOutClick : () => openAuthModal('login')}
-            >
-              {user ? 'Sign out' : 'Sign in'}
-            </Button>
+            {user && (
+              <button
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-gray-100 text-sm font-bold text-gray-600 shadow-sm transition-opacity hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-brand/20"
+                onClick={() => {
+                  if (activeRole === 'employer') {
+                    navigate('/employer/profile');
+                  } else if (activeRole === 'seeker') {
+                    navigate('/student/profile');
+                  }
+                }}
+                title="Your Profile"
+              >
+                {/* Simplistic initial - could use user.email or user metadata if available */}
+                {user.email?.charAt(0).toUpperCase() || 'U'}
+              </button>
+            )}
+            {user ? (
+              <button
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-gray-100 text-sm font-bold text-gray-600 shadow-sm transition-opacity hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-brand/20"
+                onClick={handleSignOutClick}
+                title="Sign out"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            ) : (
+              <button
+                className="flex h-9 items-center justify-center gap-2 rounded-full border border-gray-200 bg-gray-100 px-4 text-sm font-bold text-gray-600 shadow-sm transition-opacity hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-brand/20"
+                onClick={() => openAuthModal('login')}
+                title="Sign in"
+              >
+                <LogIn className="h-4 w-4" />
+                <span>Sign In</span>
+              </button>
+            )}
           </div>
         </div>
       </header>

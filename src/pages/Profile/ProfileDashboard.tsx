@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { DashboardShell } from '../../layouts/DashboardShell';
 import { Tabs } from '../../components/ui/tabs';
 import { Input } from '../../components/ui/input';
@@ -36,9 +36,18 @@ const defaultProfileFields = {
   seekerType: 'student',
 };
 
+import { Modal } from '../../components/ui/modal';
+
 export default function ProfileDashboard() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('profile');
+  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
+
+  const handleConfirmSignOut = async () => {
+    await signOut();
+    navigate('/');
+  };
 
   // Real Data State
   const [loading, setLoading] = useState(true);
@@ -187,8 +196,8 @@ export default function ProfileDashboard() {
     setUploading(true);
     try {
       const fileExt = uploadFile.name.split('.').pop();
-      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-      const filePath = `${fileName}`;
+      const fileName = `${user.id} -${Date.now()}.${fileExt} `;
+      const filePath = `${fileName} `;
 
       // 1. Upload to Storage
       const { error: uploadError } = await supabase.storage
@@ -358,9 +367,16 @@ export default function ProfileDashboard() {
                 ))}
               </div>
             </div>
-            <div className="md:col-span-2 flex items-center gap-2">
+            <div className="md:col-span-2 flex justify-end items-center gap-2">
               <Button variant="primary" onClick={handleSaveProfile} disabled={loading}>
                 {loading ? 'Saving...' : 'Save Profile'}
+              </Button>
+              <Button
+                variant="ghost"
+                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                onClick={() => setShowSignOutConfirm(true)}
+              >
+                Sign Out
               </Button>
             </div>
           </div>
@@ -504,6 +520,29 @@ export default function ProfileDashboard() {
           </div>
         </div>
       )}
+
+      <Modal
+        open={showSignOutConfirm}
+        onClose={() => setShowSignOutConfirm(false)}
+        title="Sign Out Assessment"
+        maxWidth="max-w-sm"
+      >
+        <div className="flex flex-col gap-4">
+          <p className="text-gray-600">Are you sure you want to sign out of your account?</p>
+          <div className="flex justify-end gap-3">
+            <Button variant="ghost" onClick={() => setShowSignOutConfirm(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleConfirmSignOut}
+              className="bg-red-600 hover:bg-red-700 border-red-600 from-red-600 to-red-700"
+            >
+              Sign Out
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </DashboardShell>
   );
 }

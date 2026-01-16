@@ -13,6 +13,9 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { AuthModal } from './components/AuthModal';
 
 import OrganizationProfile from './pages/Employer/OrganizationProfile';
+import OrganizationTeam from './pages/Employer/OrganizationTeam';
+import JoinOrganization from './pages/Employer/JoinOrganization';
+import EmployerProfile from './pages/Employer/EmployerProfile';
 
 function App() {
   return (
@@ -51,13 +54,32 @@ function App() {
           }
         />
         <Route
-          path="/employer/profile"
+        />
+        <Route
+          path="/employer/organization"
           element={
             <ProtectedRoute requiredRole="employer">
               <OrganizationProfile />
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/employer/profile"
+          element={
+            <ProtectedRoute requiredRole="employer">
+              <EmployerProfile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/employer/team"
+          element={
+            <ProtectedRoute requiredRole="employer">
+              <OrganizationTeam />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/join" element={<JoinOrganization />} />
         <Route
           path="/admin"
           element={

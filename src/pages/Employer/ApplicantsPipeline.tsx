@@ -19,7 +19,7 @@ const sidebarLinks = [
   { to: '/employer/dashboard', label: 'Overview' },
   { to: '/employer/applicants', label: 'Applicants' },
   { to: '/employer/post-job', label: 'Post job' },
-  { to: '/employer/profile', label: 'Organization Profile' }
+  { to: '/employer/organization', label: 'Organization Profile' }
 ];
 
 export default function ApplicantsPipeline() {

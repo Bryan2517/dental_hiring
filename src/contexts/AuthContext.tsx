@@ -194,18 +194,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         }
 
-        if (role === 'employer' && metadata?.employerData) {
-          const { error: orgError } = await supabase.from('organizations').insert({
-            owner_user_id: authData.user.id,
-            org_name: metadata.employerData.clinicName,
-            city: metadata.employerData.city,
-            country: metadata.employerData.country || 'Malaysia',
-            org_type: 'clinic',
-          });
-
-          if (orgError) {
-            console.error('Error creating organization:', orgError);
-          }
+        if (role === 'employer') {
+          // Organization creation is now decoupled from signup.
+          // The user will create or join an organization from the dashboard.
         }
       }
 

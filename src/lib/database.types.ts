@@ -302,6 +302,57 @@ export type Database = {
           },
         ]
       }
+      organization_invites: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          expires_at: string
+          max_uses: number | null
+          org_id: string
+          role: Database["public"]["Enums"]["org_member_role"]
+          status: string
+          token: string
+          used_count: number | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          expires_at: string
+          max_uses?: number | null
+          org_id: string
+          role?: Database["public"]["Enums"]["org_member_role"]
+          status?: string
+          token?: string
+          used_count?: number | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string
+          max_uses?: number | null
+          org_id?: string
+          role?: Database["public"]["Enums"]["org_member_role"]
+          status?: string
+          token?: string
+          used_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_invites_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_invites_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       organization_members: {
         Row: {
           created_at: string
@@ -708,11 +759,23 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
-      is_org_member: {
+      get_invite_details: {
         Args: {
-          p_org_id: string
+          invite_token: string
         }
-        Returns: boolean
+        Returns: {
+          org_name: string
+          org_id: string
+          role: Database["public"]["Enums"]["org_member_role"]
+          inviter_name: string
+          is_valid: boolean
+        }[]
+      }
+      accept_invite: {
+        Args: {
+          invite_token: string
+        }
+        Returns: Json
       }
     }
     Enums: {

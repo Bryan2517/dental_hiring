@@ -52,12 +52,12 @@ export function JobCard({ job, onApply, isSaved, onToggleSave }: JobCardProps) {
 
       <div className="flex items-start justify-between gap-3 pr-12">
         <div className="space-y-1">
-          <p className="inline-flex items-center gap-2 rounded-full bg-brand/10 px-3 py-1 text-xs font-semibold text-brand">
+          <p className="inline-flex items-center gap-2 rounded-full bg-brand/10 px-3 py-1 text-sm font-semibold text-brand">
             {job.roleType}
             <span className="text-gray-500">- {timeAgo(job.postedAt)}</span>
           </p>
-          <h3 className="text-xl font-semibold text-gray-900">{job.clinicName}</h3>
-          <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
+          <h3 className="text-2xl font-bold text-gray-900">{job.clinicName}</h3>
+          <div className="flex flex-wrap items-center gap-3 text-base text-gray-600">
             <span className="inline-flex items-center gap-1">
               <Building2 className="h-4 w-4 text-brand" />
               {job.employmentType}
@@ -83,7 +83,7 @@ export function JobCard({ job, onApply, isSaved, onToggleSave }: JobCardProps) {
         </div>
       </div>
 
-      <p className="text-sm text-gray-700 leading-relaxed">{job.description}</p>
+      <p className="text-base text-gray-700 leading-relaxed">{job.description}</p>
 
       <div className="flex flex-wrap gap-2">
         {job.specialtyTags.slice(0, 4).map((tag) => (
@@ -92,7 +92,7 @@ export function JobCard({ job, onApply, isSaved, onToggleSave }: JobCardProps) {
       </div>
 
       <div className="flex items-center justify-between gap-3 pt-2">
-        <div className="flex flex-wrap gap-2 text-xs text-gray-600">
+        <div className="flex flex-wrap gap-2 text-sm text-gray-600">
           {job.requirements.slice(0, 2).map((req) => (
             <span key={req} className="rounded-full bg-gray-100 px-3 py-1">
               {req}

@@ -8,12 +8,21 @@ import { Breadcrumbs } from '../../components/Breadcrumbs';
 import { JobStage } from '../../lib/types';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
+import { getUsersOrganizations } from '../../lib/api/organizations';
+import { ChevronsUpDown, Building2, Users } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '../../components/ui/dropdown-menu';
 
 const sidebarLinks = [
   { to: '/employer/dashboard', label: 'Overview' },
   { to: '/employer/post-job', label: 'Post job' },
   { to: '/employer/applicants', label: 'Applicants' },
-  { to: '/employer/profile', label: 'Organization Profile' },
+  { to: '/employer/team', label: 'Team' },
+  { to: '/employer/organization', label: 'Organization Profile' },
   { to: '/jobs', label: 'Job board' }
 ];
 
@@ -26,6 +35,7 @@ export default function EmployerDashboard() {
   const [activeJobs, setActiveJobs] = useState<any[]>([]); // TODO: type properly with DB types
   const [applications, setApplications] = useState<any[]>([]);
   const [org, setOrg] = useState<any>(null);
+  const [allOrgs, setAllOrgs] = useState<any[]>([]);
 
   useEffect(() => {
     if (!user) return;
@@ -33,27 +43,30 @@ export default function EmployerDashboard() {
     async function fetchEmployerData() {
       setLoading(true);
       try {
-        // 1. Get Organization
-        const { data: orgData, error: orgError } = await supabase
-          .from('organizations')
-          .select('*')
-          .eq('owner_user_id', user!.id)
-          .single();
+        // 1. Get All Organizations (Owned + Member)
+        const orgsData = await getUsersOrganizations(user!.id);
+        setAllOrgs(orgsData || []);
 
-        if (orgError) {
-          console.error('Error fetching org:', orgError);
-          setLoading(false);
-          return;
+        // Resolve Active Org
+        let activeOrg = null;
+        const storedOrgId = localStorage.getItem('activeOrgId');
+
+        if (storedOrgId && orgsData?.find(o => o.id === storedOrgId)) {
+          activeOrg = orgsData.find(o => o.id === storedOrgId);
+        } else if (orgsData && orgsData.length > 0) {
+          activeOrg = orgsData[0];
         }
-        setOrg(orgData);
 
-        if (orgData) {
+        setOrg(activeOrg);
+
+        if (activeOrg) {
+          localStorage.setItem('activeOrgId', activeOrg.id);
+
           // 2. Get Active Jobs
           const { data: jobsData, error: jobsError } = await supabase
             .from('jobs')
             .select('*')
-            .eq('org_id', orgData.id)
-            .eq('org_id', orgData.id)
+            .eq('org_id', activeOrg.id)
             .eq('status', 'published')
             .order('created_at', { ascending: false })
             .limit(5);
@@ -61,11 +74,7 @@ export default function EmployerDashboard() {
           if (jobsError) console.error('Error fetching jobs:', jobsError);
           else setActiveJobs(jobsData || []);
 
-          // 3. Get Applications (for pipeline stats & recent highlights)
-          // We need candidate details: join profiles (name) and seeker_profiles (school)
-          // Note: Supabase join syntax: `..., profiles:seeker_user_id(full_name), ...`?
-          // Foreign key on applications.seeker_user_id -> profiles.id
-          // Foreign key on applications.seeker_user_id -> seeker_profiles.user_id
+          // 3. Get Applications
           const { data: appsData, error: appsError } = await supabase
             .from('applications')
             .select(`
@@ -73,7 +82,7 @@ export default function EmployerDashboard() {
               seeker:profiles!seeker_user_id(full_name, seeker_profiles(school_name)),
               job:jobs(title)
             `)
-            .eq('org_id', orgData.id)
+            .eq('org_id', activeOrg.id)
             .order('created_at', { ascending: false });
 
           if (appsError) console.error('Error fetching apps:', appsError);
@@ -90,9 +99,8 @@ export default function EmployerDashboard() {
             setApplications(formattedApps);
           }
         }
-
       } catch (err) {
-        console.error('Unexpected error:', err);
+        console.error('Error loading dashboard:', err);
       } finally {
         setLoading(false);
       }
@@ -101,6 +109,59 @@ export default function EmployerDashboard() {
     fetchEmployerData();
   }, [user]);
 
+  const handleOrgSwitch = (orgId: string) => {
+    localStorage.setItem('activeOrgId', orgId);
+    window.location.reload();
+  };
+
+  if (loading) {
+    return (
+      <DashboardShell sidebarLinks={sidebarLinks} title="Employer Dashboard">
+        <div className="flex h-96 items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand border-t-transparent"></div>
+        </div>
+      </DashboardShell>
+    );
+  }
+
+  // Onboarding View for Users with No Organization
+  if (!org) {
+    return (
+      <DashboardShell sidebarLinks={[]} title="Employer Dashboard">
+        <div className="flex h-[80vh] flex-col items-center justify-center text-center p-4">
+          <div className="w-full max-w-lg bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+            <div className="bg-brand/10 p-4 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-6">
+              <Building2 className="h-8 w-8 text-brand" />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Welcome to your Employer Dashboard</h1>
+            <p className="text-gray-500 mb-8">To start posting jobs and managing candidates, you need to create or join an organization.</p>
+
+            <div className="space-y-4">
+              <Button
+                variant="primary"
+                size="lg"
+                className="w-full"
+                onClick={() => window.location.href = '/employer/profile'}
+              >
+                Create New Organization
+              </Button>
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-gray-100" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-white px-2 text-gray-500">Or</span>
+                </div>
+              </div>
+              <p className="text-sm text-gray-500">
+                Ask your team administrator to send you an <strong>invite link</strong> to join their organization.
+              </p>
+            </div>
+          </div>
+        </div>
+      </DashboardShell>
+    );
+  }
 
   const stageCounts = pipelineStages.map((stage) => ({
     stage,
@@ -109,25 +170,6 @@ export default function EmployerDashboard() {
 
   const highlightCandidates = applications.slice(0, 3); // Top 3 recent
 
-  if (loading) {
-    return (
-      <DashboardShell sidebarLinks={sidebarLinks} title="Employer Dashboard" subtitle="Loading..." hideNavigation>
-        <div className="flex h-64 items-center justify-center">Loading data...</div>
-      </DashboardShell>
-    );
-  }
-
-  // If no org found, prompt to create one (simple fallback)
-  if (!org) {
-    return (
-      <DashboardShell sidebarLinks={sidebarLinks} title="Employer Dashboard" subtitle="Welcome" hideNavigation>
-        <div className="p-6 text-center">
-          <p>No organization profile found. Please complete your setup.</p>
-          {/* Could add a button to navigate to org setup if it existed */}
-        </div>
-      </DashboardShell>
-    );
-  }
 
   return (
     <DashboardShell
@@ -136,12 +178,49 @@ export default function EmployerDashboard() {
       subtitle="Manage postings and review applicants."
       hideNavigation
       actions={
-        <Button variant="primary" asChild>
-          <Link to="/employer/post-job">Post a job</Link>
+        <Button variant="primary" asChild icon={<Users className="h-4 w-4" />}>
+          <Link to="/employer/team">
+            Team
+          </Link>
         </Button>
       }
     >
       <Breadcrumbs items={[{ label: 'Employer Home', to: '/employers' }, { label: 'Dashboard' }]} />
+
+      {/* Org Switcher / Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-lg bg-white border border-gray-200 flex items-center justify-center shadow-sm">
+            <Building2 className="h-5 w-5 text-brand" />
+          </div>
+          <div>
+            {/* Clean Org Switcher */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center gap-2 font-bold text-gray-900 text-xl hover:text-brand transition-colors focus:outline-none">
+                  {org.org_name}
+                  <ChevronsUpDown className="h-4 w-4 text-gray-400" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56">
+                {allOrgs.map((o) => (
+                  <DropdownMenuItem key={o.id} onClick={() => handleOrgSwitch(o.id)} className="gap-2 cursor-pointer">
+                    <span>{o.org_name}</span>
+                    {o.id === org.id && <span className="ml-auto text-xs font-medium text-brand">Active</span>}
+                    {o.membership_type === 'member' && <span className="text-xs text-gray-400 border border-gray-200 rounded px-1">Member</span>}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <span>{org.city || 'Malaysia'}</span>
+              <span>•</span>
+              <span className="capitalize">{org.membership_type === 'member' ? 'Member Access' : 'Owner Access'}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="grid gap-4 xl:grid-cols-[1fr,320px]">
         <div className="space-y-4">
           <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">

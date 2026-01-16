@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { Building2 } from 'lucide-react';
 import { DashboardShell } from '../../layouts/DashboardShell';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -6,16 +8,18 @@ import { Textarea } from '../../components/ui/textarea';
 import { Select } from '../../components/ui/select';
 import { Toast } from '../../components/ui/toast';
 import { useAuth } from '../../contexts/AuthContext';
-import { getOrganization, updateOrganization, createOrganization } from '../../lib/api/organizations';
+import { getOrganization, updateOrganization, createOrganization, getUsersOrganizations, leaveOrganization } from '../../lib/api/organizations';
 import { Database } from '../../lib/database.types';
 import { Tabs } from '../../components/ui/tabs';
 import { Breadcrumbs } from '../../components/Breadcrumbs';
 
 const sidebarLinks = [
     { to: '/employer/dashboard', label: 'Overview' },
-    { to: '/employer/applicants', label: 'Applicants' },
     { to: '/employer/post-job', label: 'Post job' },
-    { to: '/employer/profile', label: 'Organization Profile' }
+    { to: '/employer/applicants', label: 'Applicants' },
+    { to: '/employer/team', label: 'Team' },
+    { to: '/employer/organization', label: 'Organization Profile' },
+    { to: '/jobs', label: 'Job board' }
 ];
 
 type OrgType = Database['public']['Enums']['org_type'];
@@ -44,12 +48,16 @@ export default function OrganizationProfile() {
     const [toastOpen, setToastOpen] = useState(false);
     const [toastMessage, setToastMessage] = useState('');
 
+    const [canEdit, setCanEdit] = useState(false);
+    const [isCreating, setIsCreating] = useState(false);
+
     useEffect(() => {
         async function loadData() {
             if (!user) return;
             try {
-                const org = await getOrganization(user.id);
-                if (org) {
+                const orgs: any[] = await getUsersOrganizations(user.id);
+                if (orgs && orgs.length > 0) {
+                    const org = orgs[0];
                     setOrgId(org.id);
                     setOrgName(org.org_name);
                     setOrgType(org.org_type);
@@ -61,6 +69,16 @@ export default function OrganizationProfile() {
                     setState(org.state || '');
                     setPostcode(org.postcode || '');
                     setCountry(org.country || 'Malaysia');
+
+                    // Check permissions
+                    // Admin or Owner can edit
+                    const isOwner = org.membership_type === 'owner' || org.member_role === 'owner';
+                    const isAdmin = org.member_role === 'admin';
+                    setCanEdit(isOwner || isAdmin);
+                } else {
+                    // No organization found
+                    setOrgId(null);
+                    setCanEdit(true); // Allow editing if creating new
                 }
             } catch (error) {
                 console.error('Error loading organization:', error);
@@ -91,6 +109,11 @@ export default function OrganizationProfile() {
             };
 
             if (orgId) {
+                if (!canEdit) {
+                    setToastMessage('You do not have permission to edit this organization.');
+                    setToastOpen(true);
+                    return;
+                }
                 await updateOrganization(orgId, orgData);
             } else {
                 const newOrg = await createOrganization({
@@ -98,6 +121,8 @@ export default function OrganizationProfile() {
                     ...orgData
                 });
                 setOrgId(newOrg.id);
+                // Refresh permissions to owner after creation
+                setCanEdit(true);
             }
 
             setToastMessage('Organization profile saved successfully');
@@ -137,98 +162,171 @@ export default function OrganizationProfile() {
             /> */}
 
             {activeTab === 'profile' && (
-                <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm space-y-6">
-                    <div className="grid gap-4 md:grid-cols-2">
-                        <Input
-                            label="Organization Name"
-                            value={orgName}
-                            onChange={(e) => setOrgName(e.target.value)}
-                            required
-                            placeholder="e.g. Happy Teeth Dental"
-                        />
-                        <Select
-                            label="Organization Type"
-                            value={orgType}
-                            onChange={(e) => setOrgType(e.target.value as OrgType)}
-                        >
-                            <option value="clinic">Dental Clinic</option>
-                            <option value="lab">Dental Lab</option>
-                            <option value="dental_group">Dental Group</option>
-                            <option value="supplier">Supplier</option>
-                            <option value="other">Other</option>
-                        </Select>
-
-                        <Input
-                            label="Website URL"
-                            value={websiteUrl}
-                            onChange={(e) => setWebsiteUrl(e.target.value)}
-                            placeholder="https://example.com"
-                        />
-                        <div className="md:col-span-2">
-                            <Textarea
-                                label="About the Organization"
-                                value={description}
-                                onChange={(e) => setDescription(e.target.value)}
-                                placeholder="Tell candidates about your practice, culture, and values..."
-                                rows={4}
-                            />
+                <>
+                    {!orgId && !isCreating ? (
+                        <div className="rounded-2xl border border-gray-100 bg-white p-8 text-center shadow-sm">
+                            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-50">
+                                <Building2 className="h-8 w-8 text-blue-600" />
+                            </div>
+                            <h2 className="mb-2 text-xl font-semibold text-gray-900">No Organization Found</h2>
+                            <p className="mb-6 text-gray-500 max-w-md mx-auto">
+                                You haven't created or joined an organization yet. Create a new organization profile or join an existing team.
+                            </p>
+                            <div className="flex justify-center gap-4">
+                                <Button variant="primary" onClick={() => setIsCreating(true)}>
+                                    Create Organization
+                                </Button>
+                                <Button variant="outline" asChild>
+                                    <Link to="/employer/dashboard">Join Existing Team</Link>
+                                </Button>
+                            </div>
+                            <p className="mt-4 text-xs text-gray-400">
+                                To join a team, ask an administrator to send you an invite link.
+                            </p>
                         </div>
+                    ) : (
+                        <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm space-y-6">
+                            {!canEdit && (
+                                <div className="bg-yellow-50 text-yellow-800 p-4 rounded-lg text-sm border border-yellow-100 mb-4">
+                                    <span className="font-semibold">View Only:</span> You need to be an Admin or Owner to edit organization details.
+                                </div>
+                            )}
 
-                        <div className="md:col-span-2 pt-2 border-t border-gray-100 mt-2">
-                            <h3 className="text-sm font-semibold text-gray-800 mb-4">Location</h3>
                             <div className="grid gap-4 md:grid-cols-2">
-                                <div className="md:col-span-2">
-                                    <Input
-                                        label="Address Line 1"
-                                        value={address1}
-                                        onChange={(e) => setAddress1(e.target.value)}
-                                        placeholder="Street address"
-                                    />
-                                </div>
-                                <div className="md:col-span-2">
-                                    <Input
-                                        label="Address Line 2"
-                                        value={address2}
-                                        onChange={(e) => setAddress2(e.target.value)}
-                                        placeholder="Suite, unit, building, etc. (optional)"
-                                    />
-                                </div>
                                 <Input
-                                    label="City"
-                                    value={city}
-                                    onChange={(e) => setCity(e.target.value)}
-                                    placeholder="e.g. Kuala Lumpur"
-                                />
-                                <Input
-                                    label="State"
-                                    value={state}
-                                    onChange={(e) => setState(e.target.value)}
-                                    placeholder="e.g. Selangor"
-                                />
-                                <Input
-                                    label="Postcode"
-                                    value={postcode}
-                                    onChange={(e) => setPostcode(e.target.value)}
-                                    placeholder="e.g. 50000"
+                                    label="Organization Name"
+                                    value={orgName}
+                                    onChange={(e) => setOrgName(e.target.value)}
+                                    required
+                                    placeholder="e.g. Happy Teeth Dental"
+                                    disabled={!canEdit}
                                 />
                                 <Select
-                                    label="Country"
-                                    value={country}
-                                    onChange={(e) => setCountry(e.target.value)}
+                                    label="Organization Type"
+                                    value={orgType}
+                                    onChange={(e) => setOrgType(e.target.value as OrgType)}
+                                    disabled={!canEdit}
                                 >
-                                    <option value="Malaysia">Malaysia</option>
-                                    <option value="Singapore">Singapore</option>
+                                    <option value="clinic">Dental Clinic</option>
+                                    <option value="lab">Dental Lab</option>
+                                    <option value="dental_group">Dental Group</option>
+                                    <option value="supplier">Supplier</option>
+                                    <option value="other">Other</option>
                                 </Select>
+
+                                <Input
+                                    label="Website URL"
+                                    value={websiteUrl}
+                                    onChange={(e) => setWebsiteUrl(e.target.value)}
+                                    placeholder="https://example.com"
+                                    disabled={!canEdit}
+                                />
+                                <div className="md:col-span-2">
+                                    <Textarea
+                                        label="About the Organization"
+                                        value={description}
+                                        onChange={(e) => setDescription(e.target.value)}
+                                        placeholder="Tell candidates about your practice, culture, and values..."
+                                        rows={4}
+                                        disabled={!canEdit}
+                                    />
+                                </div>
+
+                                <div className="md:col-span-2 pt-2 border-t border-gray-100 mt-2">
+                                    <h3 className="text-sm font-semibold text-gray-800 mb-4">Location</h3>
+                                    <div className="grid gap-4 md:grid-cols-2">
+                                        <div className="md:col-span-2">
+                                            <Input
+                                                label="Address Line 1"
+                                                value={address1}
+                                                onChange={(e) => setAddress1(e.target.value)}
+                                                placeholder="Street address"
+                                                disabled={!canEdit}
+                                            />
+                                        </div>
+                                        <div className="md:col-span-2">
+                                            <Input
+                                                label="Address Line 2"
+                                                value={address2}
+                                                onChange={(e) => setAddress2(e.target.value)}
+                                                placeholder="Suite, unit, building, etc. (optional)"
+                                                disabled={!canEdit}
+                                            />
+                                        </div>
+                                        <Input
+                                            label="City"
+                                            value={city}
+                                            onChange={(e) => setCity(e.target.value)}
+                                            placeholder="e.g. Kuala Lumpur"
+                                            disabled={!canEdit}
+                                        />
+                                        <Input
+                                            label="State"
+                                            value={state}
+                                            onChange={(e) => setState(e.target.value)}
+                                            placeholder="e.g. Selangor"
+                                            disabled={!canEdit}
+                                        />
+                                        <Input
+                                            label="Postcode"
+                                            value={postcode}
+                                            onChange={(e) => setPostcode(e.target.value)}
+                                            placeholder="e.g. 50000"
+                                            disabled={!canEdit}
+                                        />
+                                        <Select
+                                            label="Country"
+                                            value={country}
+                                            onChange={(e) => setCountry(e.target.value)}
+                                            disabled={!canEdit}
+                                        >
+                                            <option value="Malaysia">Malaysia</option>
+                                            <option value="Singapore">Singapore</option>
+                                        </Select>
+                                    </div>
+                                </div>
+
+                                <div className="md:col-span-2 flex justify-end items-center gap-2 mt-6 pt-4 border-t border-gray-100">
+                                    {isCreating && (
+                                        <Button variant="ghost" onClick={() => setIsCreating(false)}>
+                                            Cancel
+                                        </Button>
+                                    )}
+                                    {canEdit && (
+                                        <Button variant="primary" onClick={() => handleSubmit()} disabled={saving}>
+                                            {saving ? 'Saving...' : 'Save Profile'}
+                                        </Button>
+                                    )}
+
+                                    {/* Leave Button */}
+                                    {!isCreating && orgId && (
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
+                                            onClick={async () => {
+                                                if (confirm('Are you sure you want to leave this organization?')) {
+                                                    try {
+                                                        setSaving(true);
+                                                        await leaveOrganization(user.id, orgId);
+                                                        window.location.reload();
+                                                    } catch (err: any) {
+                                                        setToastMessage(err.message || 'Failed to leave organization');
+                                                        setToastOpen(true);
+                                                        setSaving(false);
+                                                    }
+                                                }
+                                            }}
+                                            disabled={saving}
+                                        >
+                                            Leave Organization
+                                        </Button>
+                                    )}
+                                </div>
                             </div>
                         </div>
-
-                        <div className="md:col-span-2 flex justify-end gap-2 mt-4">
-                            <Button variant="primary" onClick={() => handleSubmit()} disabled={saving}>
-                                {saving ? 'Saving...' : 'Save Profile'}
-                            </Button>
-                        </div>
-                    </div>
-                </div>
+                    )}
+                </>
             )}
 
             {activeTab === 'settings' && (

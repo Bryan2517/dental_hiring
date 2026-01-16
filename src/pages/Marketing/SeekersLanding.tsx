@@ -148,18 +148,18 @@ export default function SeekersLanding() {
         <div className="absolute bottom-0 right-0 h-56 w-56 rounded-full bg-sky-200/40 blur-3xl" />
         <div className="relative grid items-center gap-8 md:grid-cols-[1.2fr,0.8fr]">
           <div className="space-y-5">
-            <p className="inline-flex items-center gap-2 rounded-full bg-brand/10 px-3 py-1 text-xs font-semibold text-brand">
+            <p className="inline-flex items-center gap-2 rounded-full bg-brand/10 px-3 py-1 text-sm font-semibold text-brand">
               Job Seeker Hub
             </p>
-            <h1 className="text-4xl font-bold text-gray-900 md:text-5xl">
+            <h1 className="text-5xl font-bold text-gray-900 md:text-6xl">
               Find dental roles with a clearer, faster path to offers.
             </h1>
-            <p className="text-lg text-gray-600">
+            <p className="text-xl text-gray-600">
               Built for dental students, assistants, and coordinators. Discover roles, apply quickly, and stay in control of
               every application.
             </p>
             <div className="flex flex-wrap gap-3">
-              <Button variant="primary" size="lg" onClick={() => navigate('/jobs')}>
+              <Button variant="primary" size="xl" onClick={() => navigate('/jobs')}>
                 Browse Jobs
               </Button>
               <Button variant="secondary" size="lg" onClick={() => navigate('/student/profile')}>
@@ -182,7 +182,7 @@ export default function SeekersLanding() {
           </div>
           <div className="grid gap-4">
             <Card className="p-6">
-              <p className="text-sm font-semibold text-gray-900">Featured openings</p>
+              <p className="text-base font-semibold text-gray-900">Featured openings</p>
               <div className="mt-4 space-y-3">
                 {loading ? (
                   <p className="text-xs text-gray-500">Loading...</p>
@@ -196,10 +196,10 @@ export default function SeekersLanding() {
                       onClick={() => navigate(`/jobs/${job.id}`)}
                     >
                       <div>
-                        <p className="text-sm font-semibold text-gray-900">{job.roleType}</p>
-                        <p className="text-xs text-gray-500">{job.clinicName}</p>
+                        <p className="text-base font-semibold text-gray-900">{job.roleType}</p>
+                        <p className="text-sm text-gray-500">{job.clinicName}</p>
                       </div>
-                      <span className="text-xs font-semibold text-brand">{job.city}</span>
+                      <span className="text-sm font-semibold text-brand">{job.city}</span>
                     </div>
                   ))
                 )}
@@ -222,10 +222,10 @@ export default function SeekersLanding() {
       <section className="section mt-10">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-semibold text-brand">Featured Jobs</p>
-            <h2 className="text-2xl font-bold text-gray-900">Hot roles this week</h2>
+            <p className="text-base font-semibold text-brand">Featured Jobs</p>
+            <h2 className="text-3xl font-bold text-gray-900">Hot roles this week</h2>
           </div>
-          <Link to="/jobs" className="text-sm font-semibold text-brand">
+          <Link to="/jobs" className="text-base font-semibold text-brand">
             View all <ArrowRight className="inline h-4 w-4" />
           </Link>
         </div>
@@ -259,8 +259,8 @@ export default function SeekersLanding() {
         {steps.map((step, index) => (
           <Card key={step.title} className="mt-8 p-6">
             <p className="text-sm font-semibold text-brand">Step {index + 1}</p>
-            <p className="mt-2 text-lg font-semibold text-gray-900">{step.title}</p>
-            <p className="text-sm text-gray-600">{step.desc}</p>
+            <p className="mt-2 text-xl font-semibold text-gray-900">{step.title}</p>
+            <p className="text-base text-gray-600">{step.desc}</p>
           </Card>
         ))}
       </section>
@@ -268,8 +268,8 @@ export default function SeekersLanding() {
       <section className="section mt-10 rounded-3xl bg-white/90 p-6 shadow-sm md:p-10">
         <div className="grid gap-6 md:grid-cols-[1.1fr,0.9fr]">
           <div>
-            <h3 className="text-2xl font-semibold text-gray-900">Student-friendly features</h3>
-            <p className="mt-2 text-sm text-gray-600">
+            <h3 className="text-3xl font-semibold text-gray-900">Student-friendly features</h3>
+            <p className="mt-2 text-base text-gray-600">
               Built for dental hiring workflows, so you only see roles that match your rotations and availability.
             </p>
             <div className="mt-4 grid gap-3 md:grid-cols-2">
@@ -300,7 +300,7 @@ export default function SeekersLanding() {
       </section>
 
       <section className="section mt-10">
-        <h3 className="text-xl font-semibold text-gray-900">Popular categories</h3>
+        <h3 className="text-2xl font-semibold text-gray-900">Popular categories</h3>
         <div className="mt-3 flex flex-wrap gap-2">
           {categories.map((cat) => (
             <TagPill key={cat} label={cat} highlighted />

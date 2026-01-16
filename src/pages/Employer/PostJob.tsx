@@ -11,12 +11,13 @@ import { Toast } from '../../components/ui/toast';
 import { Breadcrumbs } from '../../components/Breadcrumbs';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
+import { getUsersOrganizations } from '../../lib/api/organizations';
 
 const sidebarLinks = [
   { to: '/employer/dashboard', label: 'Overview' },
   { to: '/employer/post-job', label: 'Post job' },
   { to: '/employer/applicants', label: 'Applicants' },
-  { to: '/employer/profile', label: 'Organization Profile' }
+  { to: '/employer/organization', label: 'Organization Profile' }
 ];
 
 const steps = [
@@ -54,24 +55,30 @@ export default function PostJob() {
   useEffect(() => {
     if (!user) return;
     async function fetchOrg() {
-      const { data, error } = await supabase
-        .from('organizations')
-        .select('*')
-        .eq('owner_user_id', user!.id)
-        .single();
+      const orgs = await getUsersOrganizations(user!.id);
 
-      if (data) {
-        setOrgId(data.id);
+      if (!orgs || orgs.length === 0) {
+        // No organization found, redirect to dashboard which handles onboarding
+        navigate('/employer/dashboard');
+        return;
+      }
+
+      // Try to find active org from local storage, otherwise use first one
+      const storedOrgId = localStorage.getItem('activeOrgId');
+      const activeOrg = orgs.find(o => o.id === storedOrgId) || orgs[0];
+
+      if (activeOrg) {
+        setOrgId(activeOrg.id);
         setForm(f => ({
           ...f,
-          clinicName: data.org_name,
-          city: data.city || '',
-          country: data.country || 'Malaysia'
+          clinicName: activeOrg.org_name,
+          city: activeOrg.city || '',
+          country: activeOrg.country || 'Malaysia'
         }));
       }
     }
     fetchOrg();
-  }, [user]);
+  }, [user, navigate]);
 
   const next = () => setActiveStep((s) => Math.min(s + 1, steps.length - 1));
   const prev = () => setActiveStep((s) => Math.max(s - 1, 0));
