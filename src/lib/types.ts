@@ -42,6 +42,7 @@ export interface Candidate {
   interestedIn?: string;
   jobId: string;
   jobTitle: string;
+  isFavorite?: boolean;
 }
 
 

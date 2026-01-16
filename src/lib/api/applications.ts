@@ -28,7 +28,7 @@ function mapApplicationToFrontend(
 
 // Helper to map database application + profile to Candidate type
 function mapApplicationToCandidate(
-  app: ApplicationRow,
+  app: ApplicationRow & { is_favorite?: boolean },
   profile: ProfileRow | null,
   seekerProfile: SeekerProfileRow | null,
   job?: { title: string } | null
@@ -47,7 +47,8 @@ function mapApplicationToCandidate(
     city: profile?.city || '',
     notes: app.employer_notes || undefined,
     jobId: app.job_id,
-    jobTitle: job?.title || 'Unknown Role'
+    jobTitle: job?.title || 'Unknown Role',
+    isFavorite: app.is_favorite
   };
 }
 
@@ -112,6 +113,7 @@ export async function getCandidatesForOrg(orgId: string): Promise<Candidate[]> {
     .from('applications')
     .select(`
       *,
+      is_favorite,
       profiles!applications_seeker_user_id_fkey (
         id,
         full_name,
@@ -140,8 +142,20 @@ export async function getCandidatesForOrg(orgId: string): Promise<Candidate[]> {
       : null;
     const job = Array.isArray(item.jobs) ? item.jobs[0] : item.jobs;
 
-    return mapApplicationToCandidate(item, profile, seekerProfile as SeekerProfileRow | null, job);
+    return mapApplicationToCandidate(item as any, profile, seekerProfile as SeekerProfileRow | null, job);
   });
+}
+
+export async function toggleCandidateFavorite(applicationId: string, isFavorite: boolean): Promise<void> {
+  const { error } = await supabase
+    .from('applications')
+    .update({ is_favorite: isFavorite })
+    .eq('id', applicationId);
+
+  if (error) {
+    console.error('Error toggling favorite:', error);
+    throw error;
+  }
 }
 
 export async function createApplication(applicationData: {

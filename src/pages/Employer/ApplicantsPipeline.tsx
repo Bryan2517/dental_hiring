@@ -13,7 +13,7 @@ import { Button } from '../../components/ui/button';
 import { Toast } from '../../components/ui/toast';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
-import { getCandidatesForOrg, updateApplicationStatus } from '../../lib/api/applications';
+import { getCandidatesForOrg, updateApplicationStatus, toggleCandidateFavorite } from '../../lib/api/applications';
 
 const sidebarLinks = [
   { to: '/employer/dashboard', label: 'Overview' },
@@ -30,6 +30,7 @@ export default function ApplicantsPipeline() {
   const [loading, setLoading] = useState(true);
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | undefined>();
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [toastMessage, setToastMessage] = useState<string>('');
   const [toastOpen, setToastOpen] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState<string>(searchParams.get('jobId') || '');
@@ -62,6 +63,8 @@ export default function ApplicantsPipeline() {
           ]);
 
           setCandidates(candidatesData);
+          // Initialize favorites from data
+          setFavoriteIds(candidatesData.filter(c => c.isFavorite).map(c => c.id));
 
           if (jobsData.data && jobsData.data.length > 0) {
             setJobs(jobsData.data);
@@ -112,21 +115,41 @@ export default function ApplicantsPipeline() {
     }
   };
 
-  const toggleFavorite = (id: string) => {
+  const toggleFavorite = async (id: string) => {
     const candidate = candidates.find((c) => c.id === id);
     if (!candidate) return;
+
+    // Determine new state
+    const isNowFavorite = !favoriteIds.includes(id);
+
+    // Optimistic Update
     setFavoriteIds((prev) => {
-      const next = prev.includes(id) ? prev.filter((fav) => fav !== id) : [...prev, id];
+      const next = isNowFavorite ? [...prev, id] : prev.filter((fav) => fav !== id);
       setToastMessage(
-        `${candidate.name} ${prev.includes(id) ? 'removed from' : 'added to'} favorites`
+        `${candidate.name} ${isNowFavorite ? 'added to' : 'removed from'} favorites`
       );
       setToastOpen(true);
       return next;
     });
+
+    // API Call
+    try {
+      await toggleCandidateFavorite(id, isNowFavorite);
+    } catch (error) {
+      console.error('Error toggling favorite', error);
+      // Revert on error
+      setFavoriteIds((prev) => {
+        return isNowFavorite ? prev.filter(fid => fid !== id) : [...prev, id];
+      });
+    }
   };
 
   // Filter candidates based on selected job - strict filter
-  const filteredCandidates = candidates.filter(c => c.jobId === selectedJobId);
+  const filteredCandidates = candidates.filter(c => {
+    const matchJob = c.jobId === selectedJobId;
+    const matchFav = showFavoritesOnly ? favoriteIds.includes(c.id) : true;
+    return matchJob && matchFav;
+  });
 
   const appliedCount = filteredCandidates.filter((c) => c.status === 'Applied').length;
   const interviewCount = filteredCandidates.filter((c) => c.status === 'Interview').length;
@@ -164,7 +187,7 @@ export default function ApplicantsPipeline() {
 
       <Card className="p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 items-center">
             <Input placeholder="Search candidates..." className="min-w-[220px]" />
 
             <Select
@@ -179,15 +202,15 @@ export default function ApplicantsPipeline() {
               {jobs.length === 0 && <option value="">No active jobs</option>}
             </Select>
 
-            <Select className="min-w-[160px]" defaultValue="">
-              <option value="">All stages</option>
-              <option>Applied</option>
-              <option>Shortlisted</option>
-              <option>Interview</option>
-              <option>Offer</option>
-              <option>Hired</option>
-              <option>Rejected</option>
-            </Select>
+            <label className="flex items-center gap-2 cursor-pointer rounded-lg border border-gray-200 px-3 py-2 hover:bg-gray-50 bg-white">
+              <input
+                type="checkbox"
+                checked={showFavoritesOnly}
+                onChange={() => setShowFavoritesOnly(!showFavoritesOnly)}
+                className="rounded border-gray-300 text-brand focus:ring-brand"
+              />
+              <span className="text-sm font-medium text-gray-700">Favourites only</span>
+            </label>
           </div>
           <div className="text-xs text-gray-500">
             Updated just now - {filteredCandidates.length} total
