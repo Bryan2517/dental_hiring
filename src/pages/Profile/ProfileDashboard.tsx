@@ -39,6 +39,7 @@ const defaultProfileFields = {
 };
 
 import { Modal } from '../../components/ui/modal';
+import { Toast } from '../../components/ui/toast';
 
 export default function ProfileDashboard() {
   const { user, signOut } = useAuth();
@@ -69,6 +70,10 @@ export default function ProfileDashboard() {
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [tempAnalyzeFile, setTempAnalyzeFile] = useState<File | null>(null);
+
+  // Toast State
+  const [showToast, setShowToast] = useState(false);
+  const [toastContent, setToastContent] = useState({ title: '', description: '' });
 
   // Applications & Saved Jobs (We'll keep these mostly empty/basic for now unless we have real data populated)
   const [applications, setApplications] = useState<any[]>([]);
@@ -290,11 +295,11 @@ export default function ProfileDashboard() {
         setSelectedExposures(newExposures);
       }
 
-      alert(
-        `Resume analyzed successfully!\n\n` +
-        `Found: ${extractedData.fullName || 'Name'}, ${extractedData.email || 'Email'}\n` +
-        `Skills mapped: ${extractedData.skills?.length || 0}`
-      );
+      setToastContent({
+        title: 'Resume analyzed successfully!',
+        description: `Found: ${extractedData.fullName || 'Name'}, ${extractedData.school || 'School'}. Mapped ${extractedData.skills?.length || 0} skills.`
+      });
+      setShowToast(true);
 
       setShowApiKeyModal(false);
       setTempAnalyzeFile(null);
@@ -683,6 +688,13 @@ export default function ProfileDashboard() {
           </div>
         </div>
       </Modal>
+      <Toast
+        open={showToast}
+        onClose={() => setShowToast(false)}
+        title={toastContent.title}
+        description={toastContent.description}
+        variant="success"
+      />
     </DashboardShell >
   );
 }
