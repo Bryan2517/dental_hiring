@@ -14,6 +14,8 @@ import { getUserDocuments } from '../../lib/api/profiles';
 import { useAuth } from '../../contexts/AuthContext';
 import { Toast } from '../../components/ui/toast';
 
+import { ShareModal } from '../../components/ShareModal';
+
 export default function JobDetails() {
   const { id } = useParams<{ id: string }>();
   const { user, userRole, openAuthModal } = useAuth();
@@ -23,6 +25,7 @@ export default function JobDetails() {
   const [resumes, setResumes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showApply, setShowApply] = useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [toastOpen, setToastOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
@@ -267,7 +270,11 @@ export default function JobDetails() {
               >
                 {isSaved ? 'Saved' : 'Save job'}
               </Button>
-              <Button variant="ghost" icon={<Share2 className="h-4 w-4" />}>
+              <Button
+                variant="ghost"
+                icon={<Share2 className="h-4 w-4" />}
+                onClick={() => setShareModalOpen(true)}
+              >
                 Share
               </Button>
             </div>
@@ -283,6 +290,13 @@ export default function JobDetails() {
       </div>
 
       <ApplyModal open={showApply} job={job as Job} onClose={() => setShowApply(false)} resumes={resumes} />
+
+      <ShareModal
+        open={shareModalOpen}
+        onClose={() => setShareModalOpen(false)}
+        url={window.location.href}
+        title={`${job.roleType} at ${job.clinicName}`}
+      />
 
       <Toast
         open={toastOpen}

@@ -18,6 +18,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { Database } from '../../lib/database.types';
 import { getApplications } from '../../lib/api/applications';
+import { extractTextFromPDF } from '../../lib/utils/pdf';
+import { parseResumeWithGemini } from '../../lib/services/resume';
 
 const sidebarLinks = [
   { to: '/student/profile', label: 'Profile' },
@@ -61,6 +63,12 @@ export default function ProfileDashboard() {
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadFileName, setUploadFileName] = useState('');
   const [uploading, setUploading] = useState(false);
+
+  // Resume Scanner State
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+  const [apiKey, setApiKey] = useState('');
+  const [tempAnalyzeFile, setTempAnalyzeFile] = useState<File | null>(null);
 
   // Applications & Saved Jobs (We'll keep these mostly empty/basic for now unless we have real data populated)
   const [applications, setApplications] = useState<any[]>([]);
@@ -243,6 +251,81 @@ export default function ProfileDashboard() {
     }
   };
 
+  const handleResumeAnalysis = async (key: string, file: File) => { // Accept file directly
+    if (!file) return;
+
+    setIsAnalyzing(true);
+    try {
+      // 1. Extract Text
+      const text = await extractTextFromPDF(file);
+
+      // 2. Parse with LLM
+      const start = Date.now();
+      const extractedData = await parseResumeWithGemini(text, key);
+      const duration = Date.now() - start;
+
+      // 3. Auto-fill fields
+      setProfileFields(prev => ({
+        ...prev,
+        fullName: extractedData.fullName || prev.fullName,
+        email: extractedData.email || prev.email,
+        // Map other fields as best as possible
+        school: extractedData.school || prev.school,
+        seekerType: (extractedData.experienceYears || 0) > 2 ? 'professional' : 'student',
+      }));
+
+      // Add skills to clinical exposures if they match
+      if (extractedData.skills && extractedData.skills.length > 0) {
+        // Simple fuzzy match or direct match against our fixed list "exposures"
+        const newExposures = [...selectedExposures];
+
+        extractedData.skills.forEach(skill => {
+          const key = skill.toLowerCase();
+          // Check if this skill roughly matches one of our exposure options
+          const match = exposures.find(e => e.toLowerCase().includes(key) || key.includes(e.toLowerCase()));
+          if (match && !newExposures.includes(match)) {
+            newExposures.push(match);
+          }
+        });
+        setSelectedExposures(newExposures);
+      }
+
+      alert(
+        `Resume analyzed successfully!\n\n` +
+        `Found: ${extractedData.fullName || 'Name'}, ${extractedData.email || 'Email'}\n` +
+        `Skills mapped: ${extractedData.skills?.length || 0}`
+      );
+
+      setShowApiKeyModal(false);
+      setTempAnalyzeFile(null);
+
+    } catch (err) {
+      console.error('Analysis failed:', err);
+      // Safe error check
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes('400')) {
+        alert('Failed to analyze. Invalid API Key or Resume format.');
+      } else {
+        alert('Failed to analyze resume. Please try again.');
+      }
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const initiateAnalysis = (file: File) => {
+    setTempAnalyzeFile(file);
+    const envApiKey = import.meta.env.VITE_GEMINI_API_KEY;
+
+    if (envApiKey) {
+      handleResumeAnalysis(envApiKey, file);
+    } else if (apiKey) {
+      handleResumeAnalysis(apiKey, file);
+    } else {
+      setShowApiKeyModal(true);
+    }
+  };
+
   const [applicationFilter, setApplicationFilter] = useState<JobStage | 'All'>('All');
 
   const filteredApplications = useMemo(() => {
@@ -256,6 +339,35 @@ export default function ProfileDashboard() {
         <div className="flex h-64 items-center justify-center">
           <p className="text-gray-500">Loading profile data...</p>
         </div>
+        <Modal
+          open={showApiKeyModal}
+          onClose={() => setShowApiKeyModal(false)}
+          title="Enter Google Gemini API Key"
+          maxWidth="max-w-md"
+        >
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              To use the Resume Scanner, please provide a free Google Gemini API Key.
+              You can get one from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-brand underline">Google AI Studio</a>.
+            </p>
+            <Input
+              placeholder="AIzaSy..."
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              type="password"
+            />
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" onClick={() => setShowApiKeyModal(false)}>Cancel</Button>
+              <Button
+                variant="primary"
+                disabled={!apiKey || !tempAnalyzeFile}
+                onClick={() => tempAnalyzeFile && handleResumeAnalysis(apiKey, tempAnalyzeFile)}
+              >
+                Analyze Resume
+              </Button>
+            </div>
+          </div>
+        </Modal>
       </DashboardShell>
     );
   }
@@ -281,18 +393,39 @@ export default function ProfileDashboard() {
       {activeTab === 'profile' && (
         <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm space-y-6">
           <div className="rounded-2xl border border-dashed border-black bg-white p-4 shadow-sm">
-            <div>
-              <p className="text-lg font-semibold text-gray-900">Upload a resume</p>
-              <p className="text-sm text-gray-500">Upload your latest resume to be visible to employers.</p>
-              <p className="text-xs text-gray-400">
-                Latest resume:{' '}
-                {latestResume ? (
-                  <span className="font-semibold text-gray-700">{latestResume.name}</span>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-lg font-semibold text-gray-900">Upload a resume</p>
+                <p className="text-sm text-gray-500">Upload your latest resume to be visible to employers.</p>
+              </div>
+              <label className="flex cursor-pointer items-center gap-2 rounded-lg bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100 transition">
+                {isAnalyzing ? (
+                  <span>Analyzing...</span>
                 ) : (
-                  'none yet'
+                  <>
+                    <span>✨ Auto-fill from Resume</span>
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept=".pdf"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) initiateAnalysis(file);
+                      }}
+                    />
+                  </>
                 )}
-              </p>
+              </label>
             </div>
+            <p className="text-xs text-gray-400">
+              Latest resume:{' '}
+              {latestResume ? (
+                <span className="font-semibold text-gray-700">{latestResume.name}</span>
+              ) : (
+                'none yet'
+              )}
+            </p>
+
             <div className="mt-4">
               <button
                 type="button"
@@ -381,145 +514,152 @@ export default function ProfileDashboard() {
             </div>
           </div>
         </div>
-      )}
+      )
+      }
 
-      {activeTab === 'applications' && (
-        <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h3 className="text-lg font-semibold text-gray-900">Applications</h3>
-            <div className="flex items-center gap-2">
-              <label htmlFor="application-filter" className="text-xs font-semibold text-gray-500">
-                Status
-              </label>
-              <select
-                id="application-filter"
-                value={applicationFilter}
-                onChange={(event) => setApplicationFilter(event.target.value as JobStage | 'All')}
-                className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs text-gray-700"
-              >
-                {applicationStatuses.map((status) => (
-                  <option key={status} value={status}>
-                    {status}
-                  </option>
-                ))}
-              </select>
+      {
+        activeTab === 'applications' && (
+          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h3 className="text-lg font-semibold text-gray-900">Applications</h3>
+              <div className="flex items-center gap-2">
+                <label htmlFor="application-filter" className="text-xs font-semibold text-gray-500">
+                  Status
+                </label>
+                <select
+                  id="application-filter"
+                  value={applicationFilter}
+                  onChange={(event) => setApplicationFilter(event.target.value as JobStage | 'All')}
+                  className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs text-gray-700"
+                >
+                  {applicationStatuses.map((status) => (
+                    <option key={status} value={status}>
+                      {status}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
-          </div>
-          <div className="grid gap-3">
-            {filteredApplications.length === 0 ? (
-              <p className="text-sm text-gray-500 text-center py-4">No applications found.</p>
-            ) : (
-              filteredApplications.map((app) => (
-                <div key={app.id} className="rounded-xl border border-gray-100 bg-white p-4 transition hover:border-brand/40 hover:shadow-sm">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <h4 className="font-semibold text-gray-900">{app.jobTitle}</h4>
-                      <div className="mt-1 flex flex-col gap-0.5 text-sm text-gray-500">
-                        <span className="font-medium text-gray-700">{app.clinicName}</span>
-                        <span>{app.location}</span>
+            <div className="grid gap-3">
+              {filteredApplications.length === 0 ? (
+                <p className="text-sm text-gray-500 text-center py-4">No applications found.</p>
+              ) : (
+                filteredApplications.map((app) => (
+                  <div key={app.id} className="rounded-xl border border-gray-100 bg-white p-4 transition hover:border-brand/40 hover:shadow-sm">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <h4 className="font-semibold text-gray-900">{app.jobTitle}</h4>
+                        <div className="mt-1 flex flex-col gap-0.5 text-sm text-gray-500">
+                          <span className="font-medium text-gray-700">{app.clinicName}</span>
+                          <span>{app.location}</span>
+                        </div>
+                        <div className="mt-3 flex items-center gap-2 text-xs text-gray-400">
+                          <span>Applied {formatDate(app.appliedAt)}</span>
+                        </div>
                       </div>
-                      <div className="mt-3 flex items-center gap-2 text-xs text-gray-400">
-                        <span>Applied {formatDate(app.appliedAt)}</span>
+                      <div>
+                        <Badge variant={
+                          app.status === 'Applied' ? 'default' :
+                            app.status === 'Shortlisted' ? 'info' :
+                              app.status === 'Interview' ? 'warning' :
+                                app.status === 'Offer' ? 'success' :
+                                  'default'
+                        }>
+                          {app.status}
+                        </Badge>
                       </div>
-                    </div>
-                    <div>
-                      <Badge variant={
-                        app.status === 'Applied' ? 'default' :
-                          app.status === 'Shortlisted' ? 'info' :
-                            app.status === 'Interview' ? 'warning' :
-                              app.status === 'Offer' ? 'success' :
-                                'default'
-                      }>
-                        {app.status}
-                      </Badge>
                     </div>
                   </div>
-                </div>
-              ))
-            )}
+                ))
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
 
-      {activeTab === 'saved' && (
-        <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-          <h3 className="text-lg font-semibold text-gray-900">Saved jobs</h3>
-          <div className="mt-3 grid gap-3">
-            {savedJobs.length === 0 ? (
-              <p className="text-sm text-gray-500">No saved jobs yet.</p>
-            ) : (
-              savedJobs.map((job) => (
-                <JobCard
-                  key={job.id}
-                  job={job}
-                  onApply={() => { }}
-                  isSaved={true}
-                  onToggleSave={async (j) => {
-                    if (window.confirm('Remove from saved jobs?')) {
-                      await unsaveJob(user!.id, j.id);
-                      setSavedJobs(prev => prev.filter(p => p.id !== j.id));
+      {
+        activeTab === 'saved' && (
+          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+            <h3 className="text-lg font-semibold text-gray-900">Saved jobs</h3>
+            <div className="mt-3 grid gap-3">
+              {savedJobs.length === 0 ? (
+                <p className="text-sm text-gray-500">No saved jobs yet.</p>
+              ) : (
+                savedJobs.map((job) => (
+                  <JobCard
+                    key={job.id}
+                    job={job}
+                    onApply={() => { }}
+                    isSaved={true}
+                    onToggleSave={async (j) => {
+                      if (window.confirm('Remove from saved jobs?')) {
+                        await unsaveJob(user!.id, j.id);
+                        setSavedJobs(prev => prev.filter(p => p.id !== j.id));
+                      }
+                    }}
+                  />
+                ))
+              )}
+            </div>
+          </div>
+        )
+      }
+
+      {
+        showUploadModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">
+            <div className="w-full max-w-md overflow-hidden rounded-2xl border border-gray-200 bg-white p-6 shadow-xl">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900">Upload resume</h3>
+                <button
+                  className="text-xs font-semibold uppercase tracking-wide text-gray-500"
+                  onClick={() => {
+                    setShowUploadModal(false);
+                    setUploadFileName('');
+                    setUploadFile(null);
+                  }}
+                >
+                  Close
+                </button>
+              </div>
+              <p className="mt-2 text-sm text-gray-600">
+                Upload your resume (.pdf, .docx). The new file will replace your current latest resume.
+              </p>
+              <label className="mt-4 flex cursor-pointer items-center justify-between gap-2 rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-700 transition hover:border-brand">
+                <span className="flex items-center gap-2">
+                  <UploadCloud className="h-4 w-4 text-brand" />
+                  <span>{uploadFileName || 'Choose resume file'}</span>
+                </span>
+                <input
+                  type="file"
+                  className="hidden"
+                  accept=".pdf,.docx,.doc"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) {
+                      setUploadFile(file);
+                      setUploadFileName(file.name);
                     }
                   }}
                 />
-              ))
-            )}
-          </div>
-        </div>
-      )}
-
-      {showUploadModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">
-          <div className="w-full max-w-md overflow-hidden rounded-2xl border border-gray-200 bg-white p-6 shadow-xl">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">Upload resume</h3>
-              <button
-                className="text-xs font-semibold uppercase tracking-wide text-gray-500"
-                onClick={() => {
+              </label>
+              <div className="mt-4 flex justify-end gap-2">
+                <Button variant="ghost" size="sm" onClick={() => {
                   setShowUploadModal(false);
                   setUploadFileName('');
                   setUploadFile(null);
-                }}
-              >
-                Close
-              </button>
-            </div>
-            <p className="mt-2 text-sm text-gray-600">
-              Upload your resume (.pdf, .docx). The new file will replace your current latest resume.
-            </p>
-            <label className="mt-4 flex cursor-pointer items-center justify-between gap-2 rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-700 transition hover:border-brand">
-              <span className="flex items-center gap-2">
-                <UploadCloud className="h-4 w-4 text-brand" />
-                <span>{uploadFileName || 'Choose resume file'}</span>
-              </span>
-              <input
-                type="file"
-                className="hidden"
-                accept=".pdf,.docx,.doc"
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  if (file) {
-                    setUploadFile(file);
-                    setUploadFileName(file.name);
-                  }
-                }}
-              />
-            </label>
-            <div className="mt-4 flex justify-end gap-2">
-              <Button variant="ghost" size="sm" onClick={() => {
-                setShowUploadModal(false);
-                setUploadFileName('');
-                setUploadFile(null);
-              }}>
-                Cancel
-              </Button>
-              <Button variant="primary" size="sm" onClick={handleResumeUpload} disabled={!uploadFile || uploading}>
-                {uploading ? 'Uploading...' : 'Upload'}
-              </Button>
+                }}>
+                  Cancel
+                </Button>
+                <Button variant="primary" size="sm" onClick={handleResumeUpload} disabled={!uploadFile || uploading}>
+                  {uploading ? 'Uploading...' : 'Upload'}
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       <Modal
         open={showSignOutConfirm}
@@ -543,6 +683,6 @@ export default function ProfileDashboard() {
           </div>
         </div>
       </Modal>
-    </DashboardShell>
+    </DashboardShell >
   );
 }

@@ -10,9 +10,11 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@supabase/supabase-js": "^2.90.1",
     "clsx": "^2.1.0",
     "lucide-react": "^0.343.0",
+    "pdfjs-dist": "^5.4.530",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-hook-form": "^7.48.2",

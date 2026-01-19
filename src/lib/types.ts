@@ -27,6 +27,7 @@ export interface Job {
   salaryMin?: number;
   salaryMax?: number;
   orgId: string;
+  logoUrl?: string;
 }
 
 export interface Candidate {

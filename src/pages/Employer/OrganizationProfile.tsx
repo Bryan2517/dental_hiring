@@ -11,6 +11,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { getOrganization, updateOrganization, createOrganization, getUsersOrganizations, leaveOrganization } from '../../lib/api/organizations';
 import { Database } from '../../lib/database.types';
 import { Tabs } from '../../components/ui/tabs';
+import { supabase } from '../../lib/supabase';
 import { Breadcrumbs } from '../../components/Breadcrumbs';
 
 const sidebarLinks = [
@@ -29,6 +30,9 @@ export default function OrganizationProfile() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [orgId, setOrgId] = useState<string | null>(null);
+    const [logoFile, setLogoFile] = useState<File | null>(null);
+    const [logoPreview, setLogoPreview] = useState<string | null>(null);
+
     const [activeTab, setActiveTab] = useState('profile');
 
     // Form State
@@ -69,6 +73,7 @@ export default function OrganizationProfile() {
                     setState(org.state || '');
                     setPostcode(org.postcode || '');
                     setCountry(org.country || 'Malaysia');
+                    setLogoPreview(org.logo_url || null);
 
                     // Check permissions
                     // Admin or Owner can edit
@@ -89,12 +94,47 @@ export default function OrganizationProfile() {
         loadData();
     }, [user]);
 
+    const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            if (file.size > 5 * 1024 * 1024) { // 5MB limit
+                setToastMessage('Image size must be less than 5MB');
+                setToastOpen(true);
+                return;
+            }
+            setLogoFile(file);
+            setLogoPreview(URL.createObjectURL(file));
+        }
+    };
+
     const handleSubmit = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
         if (!user) return;
         setSaving(true);
 
         try {
+            let logoUrl = logoPreview;
+
+            // Upload Logo if new file selected
+            if (logoFile) {
+                const fileExt = logoFile.name.split('.').pop();
+                const fileName = `logos/${user.id}-${Date.now()}.${fileExt}`;
+
+                const { error: uploadError } = await supabase.storage
+                    .from('organizations')
+                    .upload(fileName, logoFile, {
+                        upsert: true
+                    });
+
+                if (uploadError) throw uploadError;
+
+                const { data: { publicUrl } } = supabase.storage
+                    .from('organizations')
+                    .getPublicUrl(fileName);
+
+                logoUrl = publicUrl;
+            }
+
             const orgData = {
                 org_name: orgName,
                 org_type: orgType,
@@ -105,7 +145,8 @@ export default function OrganizationProfile() {
                 city,
                 state,
                 postcode,
-                country
+                country,
+                logo_url: logoUrl
             };
 
             if (orgId) {
@@ -165,9 +206,34 @@ export default function OrganizationProfile() {
                 <>
                     {!orgId && !isCreating ? (
                         <div className="rounded-2xl border border-gray-100 bg-white p-8 text-center shadow-sm">
-                            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-50">
-                                <Building2 className="h-8 w-8 text-blue-600" />
+                            <div
+                                className="mx-auto mb-4 flex h-48 w-full max-w-md items-center justify-center rounded-lg bg-blue-50 relative group cursor-pointer overflow-hidden border-2 border-dashed border-blue-200 hover:border-blue-500 transition-all"
+                                onClick={() => canEdit && document.getElementById('logo-upload')?.click()}
+                            >
+                                {logoPreview ? (
+                                    <img
+                                        src={logoPreview}
+                                        alt="Organization Logo"
+                                        className="h-full w-full object-contain p-1"
+                                    />
+                                ) : (
+                                    <Building2 className="h-10 w-10 text-blue-600" />
+                                )}
+
+                                {canEdit && (
+                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <span className="text-white text-xs font-medium">Change</span>
+                                    </div>
+                                )}
                             </div>
+                            <input
+                                type="file"
+                                id="logo-upload"
+                                hidden
+                                accept="image/*"
+                                onChange={handleLogoChange}
+                                disabled={!canEdit}
+                            />
                             <h2 className="mb-2 text-xl font-semibold text-gray-900">No Organization Found</h2>
                             <p className="mb-6 text-gray-500 max-w-md mx-auto">
                                 You haven't created or joined an organization yet. Create a new organization profile or join an existing team.
@@ -191,6 +257,38 @@ export default function OrganizationProfile() {
                                     <span className="font-semibold">View Only:</span> You need to be an Admin or Owner to edit organization details.
                                 </div>
                             )}
+
+                            <div className="flex flex-col items-center mb-6">
+                                <div
+                                    className="relative group h-48 w-full max-w-md rounded-lg overflow-hidden bg-blue-50 border-2 border-dashed border-blue-200 flex items-center justify-center cursor-pointer hover:border-blue-500 transition-colors"
+                                    onClick={() => canEdit && document.getElementById('logo-upload-edit')?.click()}
+                                >
+                                    {logoPreview ? (
+                                        <img
+                                            src={logoPreview}
+                                            alt="Organization Logo"
+                                            className="h-full w-full object-contain p-1"
+                                        />
+                                    ) : (
+                                        <Building2 className="h-10 w-10 text-blue-400" />
+                                    )}
+
+                                    {canEdit && (
+                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <span className="text-white text-xs font-medium">Change</span>
+                                        </div>
+                                    )}
+                                </div>
+                                <input
+                                    type="file"
+                                    id="logo-upload-edit"
+                                    hidden
+                                    accept="image/*"
+                                    onChange={handleLogoChange}
+                                    disabled={!canEdit}
+                                />
+                                <p className="mt-2 text-xs text-gray-500">Click to upload logo (max 5MB)</p>
+                            </div>
 
                             <div className="grid gap-4 md:grid-cols-2">
                                 <Input

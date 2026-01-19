@@ -27,7 +27,7 @@ export function JobCard({ job, onApply, isSaved, onToggleSave }: JobCardProps) {
 
   return (
     <div
-      className="relative flex flex-col gap-4 rounded-3xl border border-gray-100 bg-white/90 p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg focus-within:ring-2 focus-within:ring-brand/30 cursor-pointer group"
+      className="relative block rounded-3xl border border-gray-100 bg-white/90 p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg focus-within:ring-2 focus-within:ring-brand/30 cursor-pointer group"
       onClick={goToDetails}
       onKeyDown={handleKeyDown}
       role="button"
@@ -50,40 +50,53 @@ export function JobCard({ job, onApply, isSaved, onToggleSave }: JobCardProps) {
         </div>
       )}
 
-      <div className="flex items-start justify-between gap-3 pr-12">
-        <div className="space-y-1">
-          <p className="inline-flex items-center gap-2 rounded-full bg-brand/10 px-3 py-1 text-sm font-semibold text-brand">
-            {job.roleType}
-            <span className="text-gray-500">- {timeAgo(job.postedAt)}</span>
-          </p>
-          <h3 className="text-2xl font-bold text-gray-900">{job.clinicName}</h3>
-          <div className="flex flex-wrap items-center gap-3 text-base text-gray-600">
-            <span className="inline-flex items-center gap-1">
-              <Building2 className="h-4 w-4 text-brand" />
-              {job.employmentType}
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <MapPin className="h-4 w-4 text-brand" />
-              {job.city}, {job.country}
-            </span>
-            <span className="inline-flex items-center gap-1 text-amber-700">
-              <Star className="h-4 w-4" />
-              {job.experienceLevel}
-            </span>
+      <div className="float-right ml-4 mb-2 flex flex-col items-end gap-2 text-right">
+        {job.logoUrl && (
+          <div className="mb-4 h-24 w-24 overflow-hidden rounded-lg border border-gray-100 bg-white shadow-sm flex items-center justify-center">
+            <img
+              src={job.logoUrl}
+              alt={`${job.clinicName} logo`}
+              className="h-full w-full object-contain p-1"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = 'none';
+              }}
+            />
           </div>
-        </div>
-        <div className="flex flex-col items-end gap-2 text-right">
-          <Badge variant="default" className="text-sm">
-            {job.salaryRange}
-          </Badge>
-          <div className="flex gap-2">
-            {job.newGradWelcome && <Badge variant="info">New grad friendly</Badge>}
-            {job.trainingProvided && <Badge variant="success">Training provided</Badge>}
-          </div>
+        )}
+        <Badge variant="default" className="text-sm">
+          {job.salaryRange}
+        </Badge>
+        <div className="flex gap-2">
+          {job.newGradWelcome && <Badge variant="info">New grad friendly</Badge>}
+          {job.trainingProvided && <Badge variant="success">Training provided</Badge>}
         </div>
       </div>
 
-      <p className="text-base text-gray-700 leading-relaxed">{job.description}</p>
+      <div className="space-y-1 mb-4">
+        <p className="inline-flex items-center gap-2 rounded-full bg-brand/10 px-3 py-1 text-sm font-semibold text-brand">
+          {job.roleType}
+          <span className="text-gray-500">- {timeAgo(job.postedAt)}</span>
+        </p>
+        <h3 className="text-2xl font-bold text-gray-900">{job.clinicName}</h3>
+        <div className="flex flex-wrap items-center gap-3 text-base text-gray-600">
+          <span className="inline-flex items-center gap-1">
+            <Building2 className="h-4 w-4 text-brand" />
+            {job.employmentType}
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <MapPin className="h-4 w-4 text-brand" />
+            {job.city}, {job.country}
+          </span>
+          <span className="inline-flex items-center gap-1 text-amber-700">
+            <Star className="h-4 w-4" />
+            {job.experienceLevel}
+          </span>
+        </div>
+      </div>
+
+      <p className="text-base text-gray-700 leading-relaxed mb-4">{job.description}</p>
+
+      <div className="clear-both"></div>
 
       <div className="flex flex-wrap gap-2">
         {job.specialtyTags.slice(0, 4).map((tag) => (

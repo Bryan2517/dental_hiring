@@ -58,6 +58,7 @@ function mapJobToFrontend(job: JobRow, org: OrganizationRow | null): Job {
     salaryMin: job.salary_min || undefined,
     salaryMax: job.salary_max || undefined,
     orgId: job.org_id,
+    logoUrl: org?.logo_url || undefined,
   };
 }
 
@@ -77,7 +78,8 @@ export async function getJobs(filters?: {
         id,
         org_name,
         city,
-        country
+        country,
+        logo_url
       )
     `);
 
@@ -136,7 +138,8 @@ export async function getJobById(id: string): Promise<Job | null> {
         id,
         org_name,
         city,
-        country
+        country,
+        logo_url
       )
     `)
     .eq('id', id)
@@ -187,7 +190,8 @@ export async function createJob(jobData: {
         id,
         org_name,
         city,
-        country
+        country,
+        logo_url
       )
     `)
     .single();
@@ -260,7 +264,8 @@ export async function getSavedJobs(userId: string): Promise<Job[]> {
           id,
           org_name,
           city,
-          country
+          country,
+          logo_url
         )
       )
     `)

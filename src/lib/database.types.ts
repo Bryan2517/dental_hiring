@@ -62,6 +62,7 @@ export type Database = {
           created_at: string
           employer_notes: string | null
           id: string
+          is_favorite: boolean
           job_id: string
           org_id: string
           resume_doc_id: string | null
@@ -75,6 +76,7 @@ export type Database = {
           created_at?: string
           employer_notes?: string | null
           id?: string
+          is_favorite?: boolean
           job_id: string
           org_id: string
           resume_doc_id?: string | null
@@ -88,6 +90,7 @@ export type Database = {
           created_at?: string
           employer_notes?: string | null
           id?: string
+          is_favorite?: boolean
           job_id?: string
           org_id?: string
           resume_doc_id?: string | null
@@ -407,6 +410,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          logo_url: string | null
           org_name: string
           org_type: Database["public"]["Enums"]["org_type"]
           owner_user_id: string
@@ -424,6 +428,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          logo_url?: string | null
           org_name: string
           org_type?: Database["public"]["Enums"]["org_type"]
           owner_user_id: string
@@ -441,6 +446,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          logo_url?: string | null
           org_name?: string
           org_type?: Database["public"]["Enums"]["org_type"]
           owner_user_id?: string
