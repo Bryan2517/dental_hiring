@@ -13,7 +13,7 @@ import { JobStage, Resume } from '../../lib/types';
 import { formatDate } from '../../lib/utils';
 import { getSavedJobs, unsaveJob } from '../../lib/api/jobs';
 import { Breadcrumbs } from '../../components/Breadcrumbs';
-import { UploadCloud } from 'lucide-react';
+import { UploadCloud, ScanText } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { Database } from '../../lib/database.types';
@@ -408,7 +408,8 @@ export default function ProfileDashboard() {
                   <span>Analyzing...</span>
                 ) : (
                   <>
-                    <span>✨ Auto-fill from Resume</span>
+                    <ScanText className="h-4 w-4" />
+                    <span>Auto-fill from Resume</span>
                     <input
                       type="file"
                       className="hidden"
