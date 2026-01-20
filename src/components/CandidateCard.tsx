@@ -48,13 +48,13 @@ export function CandidateCard({
       </button>
       <div className="pr-7">
         <p className="text-sm font-semibold text-gray-900">{candidate.name}</p>
-        <div className="mt-1 flex items-center gap-2 text-xs text-gray-600 flex-wrap">
+        <div className="mt-1 flex items-center gap-1 text-xs text-gray-600 flex-wrap">
           <span className="inline-flex items-center gap-1">
             <GraduationCap className="h-4 w-4 text-brand" />
-            <span className="truncate max-w-[160px]">{candidate.school}</span>
+            <span className="truncate max-w-[100px]">{candidate.school}</span>
           </span>
           <span className="text-gray-300">-</span>
-          <span className="whitespace-nowrap">Grad {candidate.gradDate.slice(0, 4)}</span>
+          <span className="whitespace-nowrap">Grad {candidate.gradDate}</span>
         </div>
       </div>
       <div className="flex flex-wrap gap-2">

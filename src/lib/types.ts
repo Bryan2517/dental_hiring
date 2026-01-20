@@ -44,6 +44,7 @@ export interface Candidate {
   jobId: string;
   jobTitle: string;
   isFavorite?: boolean;
+  resumePath?: string;
 }
 
 

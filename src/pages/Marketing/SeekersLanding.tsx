@@ -151,7 +151,7 @@ export default function SeekersLanding() {
             <p className="inline-flex items-center gap-2 rounded-full bg-brand/10 px-3 py-1 text-sm font-semibold text-brand">
               Job Seeker Hub
             </p>
-            <h1 className="text-5xl font-bold text-gray-900 md:text-6xl">
+            <h1 className="text-4xl font-bold text-gray-900 md:text-5xl">
               Find dental roles with a clearer, faster path to offers.
             </h1>
             <p className="text-xl text-gray-600">

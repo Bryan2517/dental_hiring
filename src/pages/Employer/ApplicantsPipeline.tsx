@@ -11,6 +11,7 @@ import { Input } from '../../components/ui/input';
 import { Select } from '../../components/ui/select';
 import { Button } from '../../components/ui/button';
 import { Toast } from '../../components/ui/toast';
+import { ShareModal } from '../../components/ShareModal';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { getCandidatesForOrg, updateApplicationStatus, toggleCandidateFavorite } from '../../lib/api/applications';
@@ -33,7 +34,12 @@ export default function ApplicantsPipeline() {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [toastMessage, setToastMessage] = useState<string>('');
   const [toastOpen, setToastOpen] = useState(false);
+
   const [selectedJobId, setSelectedJobId] = useState<string>(searchParams.get('jobId') || '');
+  const [showShareModal, setShowShareModal] = useState(false);
+
+  // Get current job title
+  const currentJob = jobs.find(j => j.id === selectedJobId);
 
   // Update URL when filter changes
   useEffect(() => {
@@ -144,6 +150,53 @@ export default function ApplicantsPipeline() {
     }
   };
 
+  // Export to CSV
+  const handleExport = () => {
+    if (filteredCandidates.length === 0) {
+      setToastMessage('No candidates to export');
+      setToastOpen(true);
+      return;
+    }
+
+    // Define headers
+    const headers = ['Name', 'Status', 'Job Title', 'School', 'Grad Date', 'City', 'Rating', 'Notes'];
+
+    // Map data to rows
+    const rows = filteredCandidates.map(c => [
+      c.name,
+      c.status,
+      c.jobTitle,
+      c.school,
+      c.gradDate,
+      c.city,
+      c.rating,
+      c.notes || ''
+    ]);
+
+    // Construct CSV content
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => {
+        let stringCell = String(cell);
+        // Prevent Excel formula injection
+        if (/^[=+\-@]/.test(stringCell)) {
+          stringCell = "'" + stringCell;
+        }
+        return `"${stringCell.replace(/"/g, '""')}"`;
+      }).join(','))
+    ].join('\n');
+
+    // Create download link
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `applicants_export_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // Filter candidates based on selected job - strict filter
   const filteredCandidates = candidates.filter(c => {
     const matchJob = c.jobId === selectedJobId;
@@ -176,10 +229,10 @@ export default function ApplicantsPipeline() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <Breadcrumbs items={[{ label: 'Employer Home', to: '/employers' }, { label: 'Applicants' }]} />
         <div className="flex gap-2">
-          <Button variant="secondary" size="sm">
+          <Button variant="secondary" size="sm" onClick={() => setShowShareModal(true)} disabled={!selectedJobId}>
             Invite candidate
           </Button>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={handleExport}>
             Export list
           </Button>
         </div>
@@ -308,6 +361,13 @@ export default function ApplicantsPipeline() {
         title="Status updated"
         description={toastMessage}
         variant="info"
+      />
+
+      <ShareModal
+        open={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        url={`${window.location.origin}/jobs/${selectedJobId}`}
+        title={currentJob?.title || 'Job Opportunity'}
       />
     </DashboardShell>
   );

@@ -14,7 +14,7 @@ export interface OrganizationMember {
     created_at: string;
     profile?: {
         full_name: string | null;
-        email?: string; // If we can fetch it via join, typically not directly in profiles but maybe aliases
+        email: string | null;
     };
 }
 
@@ -23,7 +23,10 @@ export async function getOrganizationMembers(orgId: string) {
         .from('organization_members')
         .select(`
       *,
-      profile:profiles!organization_members_user_id_fkey(full_name)
+      profile:profiles!organization_members_user_id_fkey(
+        full_name,
+        email
+      )
     `)
         .eq('org_id', orgId);
 

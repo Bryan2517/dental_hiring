@@ -70,6 +70,7 @@ export default function OrganizationTeam() {
 
                 // Fetch Members
                 const membersData = await getOrganizationMembers(orgData.id);
+                console.log('Fetched Members Data Full:', JSON.stringify(membersData, null, 2));
                 setMembers(membersData || []);
             } catch (err: any) {
                 console.error(err);
@@ -316,7 +317,7 @@ export default function OrganizationTeam() {
                                                 {member.profile?.full_name || 'Pending User'}
                                             </p>
                                             <p className="text-xs text-gray-500">
-                                                {member.invited_email || 'Email hidden'}
+                                                {member.invited_email || member.profile?.email || 'Email not found'}
                                             </p>
                                         </div>
                                     </div>
@@ -342,6 +343,7 @@ export default function OrganizationTeam() {
                     )}
                 </div>
             </div>
+
 
             <Toast
                 open={toastOpen}

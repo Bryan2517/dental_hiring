@@ -66,8 +66,8 @@ const processHighlights = [
 export default function EmployersLanding() {
   return (
     <AppShell background="muted">
-      <section className="section relative overflow-hidden rounded-3xl bg-gradient-to-br from-amber-50 via-white to-brand/10 p-6 shadow-sm md:p-10">
-        <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-amber-200/50 blur-3xl" />
+      <section className="section relative overflow-hidden rounded-3xl bg-gradient-to-br from-sky-100 via-white to-brand/20 p-6 shadow-sm md:p-10">
+        <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-sky-200/50 blur-3xl" />
         <div className="absolute bottom-0 left-0 h-52 w-52 rounded-full bg-brand/10 blur-3xl" />
         <div className="relative grid items-center gap-8 md:grid-cols-[1.1fr,0.9fr]">
           <div className="space-y-5">
@@ -259,10 +259,10 @@ export default function EmployersLanding() {
               <ClipboardList className="h-4 w-4 text-brand" />
               Structured dental requirements
             </div>
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-brand" />
-                Premium hiring insights
-              </div>
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-brand" />
+              Premium hiring insights
+            </div>
           </div>
         </Card>
       </section>

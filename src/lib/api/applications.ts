@@ -31,7 +31,8 @@ function mapApplicationToCandidate(
   app: ApplicationRow & { is_favorite?: boolean },
   profile: ProfileRow | null,
   seekerProfile: SeekerProfileRow | null,
-  job?: { title: string } | null
+  job: { title: string } | null,
+  resume: { storage_path: string } | null
 ): Candidate {
   const skills: string[] = [];
   const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -40,7 +41,7 @@ function mapApplicationToCandidate(
     id: app.id,
     name: profile?.full_name || 'Unknown',
     school: seekerProfile?.school_name || 'Unknown',
-    gradDate: seekerProfile?.expected_graduation_date || '',
+    gradDate: seekerProfile?.expected_graduation_date ? seekerProfile.expected_graduation_date.substring(0, 7) : '',
     skills,
     status: capitalize(app.status) as JobStage,
     rating: 4.0, // Default rating, can be calculated later
@@ -48,7 +49,8 @@ function mapApplicationToCandidate(
     notes: app.employer_notes || undefined,
     jobId: app.job_id,
     jobTitle: job?.title || 'Unknown Role',
-    isFavorite: app.is_favorite
+    isFavorite: app.is_favorite,
+    resumePath: resume?.storage_path
   };
 }
 
@@ -125,6 +127,9 @@ export async function getCandidatesForOrg(orgId: string): Promise<Candidate[]> {
       ),
       jobs!applications_job_id_fkey (
         title
+      ),
+      seeker_documents!applications_resume_doc_id_fkey (
+        storage_path
       )
     `)
     .eq('org_id', orgId);
@@ -141,8 +146,9 @@ export async function getCandidatesForOrg(orgId: string): Promise<Candidate[]> {
       ? (Array.isArray(profile.seeker_profiles) ? profile.seeker_profiles[0] : profile.seeker_profiles)
       : null;
     const job = Array.isArray(item.jobs) ? item.jobs[0] : item.jobs;
+    const resume = Array.isArray(item.seeker_documents) ? item.seeker_documents[0] : item.seeker_documents;
 
-    return mapApplicationToCandidate(item as any, profile, seekerProfile as SeekerProfileRow | null, job);
+    return mapApplicationToCandidate(item as any, profile, seekerProfile as SeekerProfileRow | null, job, resume as any);
   });
 }
 
@@ -230,4 +236,22 @@ export async function updateApplicationStatus(
       event_type: 'status_change',
       payload: { status },
     });
+}
+
+export async function updateApplicationNotes(
+  id: string,
+  notes: string
+): Promise<void> {
+  const { error } = await supabase
+    .from('applications')
+    .update({
+      employer_notes: notes,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id);
+
+  if (error) {
+    console.error('Error updating notes:', error);
+    throw error;
+  }
 }

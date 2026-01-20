@@ -472,6 +472,7 @@ export type Database = {
           city: string | null
           country: string | null
           created_at: string
+          email: string | null
           full_name: string | null
           id: string
           phone: string | null
