@@ -421,8 +421,8 @@ export default function ProfileDashboard() {
                   accept=".pdf"
                   onChange={(e) => {
                     const file = e.target.files?.[0];
-                    // Use window.alert for guaranteed feedback in case toast fails
-                    // alert(`File selected: ${file?.name || 'none'}`); 
+                    // FORCE ALERT for debugging
+                    alert(`File selected: ${file?.name || 'none'}. Starting analysis...`);
 
                     if (file) {
                       setToastContent({
@@ -441,6 +441,7 @@ export default function ProfileDashboard() {
                   className="gap-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border-indigo-100"
                   disabled={isAnalyzing}
                   onClick={() => {
+                    // alert('Button clicked, attempting to open file chooser...');
                     fileInputRef.current?.click();
                   }}
                 >
