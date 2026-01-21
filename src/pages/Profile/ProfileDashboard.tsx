@@ -262,7 +262,13 @@ export default function ProfileDashboard() {
     setIsAnalyzing(true);
     try {
       // 1. Extract Text
+      console.log('Starting PDF extraction...');
       const text = await extractTextFromPDF(file);
+      console.log('PDF extraction complete, length:', text.length);
+
+      if (!text.trim()) {
+        throw new Error('Could not extract any text from this PDF. Please try a different file.');
+      }
 
       // 2. Parse with LLM
       const start = Date.now();
@@ -306,13 +312,16 @@ export default function ProfileDashboard() {
 
     } catch (err) {
       console.error('Analysis failed:', err);
-      // Safe error check
       const msg = err instanceof Error ? err.message : String(err);
-      if (msg.includes('400')) {
-        alert('Failed to analyze. Invalid API Key or Resume format.');
-      } else {
-        alert('Failed to analyze resume. Please try again.');
-      }
+
+      setToastContent({
+        title: 'Analysis Failed',
+        description: msg.includes('400')
+          ? 'Invalid API Key or Resume format.'
+          : msg
+      });
+      setShowToast(true);
+      // alert('Failed to analyze resume. Please try again.'); // Using toast instead
     } finally {
       setIsAnalyzing(false);
     }

@@ -28,6 +28,9 @@ export async function extractTextFromPDF(file: File): Promise<string> {
         return fullText;
     } catch (error) {
         console.error('Error extracting text from PDF:', error);
-        throw new Error('Failed to extract text from PDF');
+        if (error instanceof Error) {
+            throw new Error(`Failed to extract text from PDF: ${error.message}`);
+        }
+        throw new Error('Failed to extract text from PDF: Unknown error');
     }
 }
