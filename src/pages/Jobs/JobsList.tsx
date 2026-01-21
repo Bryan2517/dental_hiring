@@ -6,7 +6,7 @@ import { JobFilters, JobFilterState } from '../../components/JobFilters';
 import { Pagination } from '../../components/Pagination';
 import { ApplyModal } from '../../components/ApplyModal';
 import { Breadcrumbs } from '../../components/Breadcrumbs';
-import { getJobs, saveJob, unsaveJob, getSavedJobs } from '../../lib/api/jobs';
+import { getJobs, saveJob, unsaveJob, getSavedJobs, hideJob, unhideJob, getHiddenJobIds } from '../../lib/api/jobs';
 import { getUserDocuments } from '../../lib/api/profiles';
 import { useAuth } from '../../contexts/AuthContext';
 import { Toast } from '../../components/ui/toast';
@@ -33,15 +33,18 @@ export default function JobsList() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [resumes, setResumes] = useState<Resume[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const pageSize = 6;
 
   const [savedJobIds, setSavedJobIds] = useState<Set<string>>(new Set());
+  const [hiddenJobIds, setHiddenJobIds] = useState<Set<string>>(new Set());
+  const [undoableJobIds, setUndoableJobIds] = useState<Set<string>>(new Set());
   const [toastOpen, setToastOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
 
   const handleApplyClick = (job: Job) => {
     if (!user || userRole !== 'seeker') {
-      openAuthModal('login', `/jobs`);
+      openAuthModal('login', '/jobs');
     } else {
       setSelectedJob(job);
     }
@@ -49,7 +52,7 @@ export default function JobsList() {
 
   const handleToggleSave = async (job: Job) => {
     if (!user || userRole !== 'seeker') {
-      openAuthModal('login', `/jobs`);
+      openAuthModal('login', '/jobs');
       return;
     }
 
@@ -86,114 +89,118 @@ export default function JobsList() {
     }
   };
 
+  const handleHideJob = async (job: Job) => {
+    if (!user || userRole !== 'seeker') {
+      openAuthModal('login', '/jobs');
+      return;
+    }
+
+    // Optimistic update: Add to both hidden and undoable
+    setHiddenJobIds(prev => new Set(prev).add(job.id));
+    setUndoableJobIds(prev => new Set(prev).add(job.id));
+
+    try {
+      await hideJob(user.id, job.id);
+      // No toast needed as the UI updates in-place
+    } catch (error) {
+      console.error('Error hiding job:', error);
+      // Revert
+      setHiddenJobIds(prev => {
+        const next = new Set(prev);
+        next.delete(job.id);
+        return next;
+      });
+      setUndoableJobIds(prev => {
+        const next = new Set(prev);
+        next.delete(job.id);
+        return next;
+      });
+      setToastMessage('Failed to hide job');
+      setToastOpen(true);
+    }
+  };
+
+  const handleUndoHide = async (job: Job) => {
+    // Optimistic revert
+    setHiddenJobIds(prev => {
+      const next = new Set(prev);
+      next.delete(job.id);
+      return next;
+    });
+    setUndoableJobIds(prev => {
+      const next = new Set(prev);
+      next.delete(job.id);
+      return next;
+    });
+
+    try {
+      await unhideJob(user.id, job.id);
+    } catch (error) {
+      console.error('Error undoing hide:', error);
+      // Revert the revert if failed (re-hide)
+      setHiddenJobIds(prev => new Set(prev).add(job.id));
+      setUndoableJobIds(prev => new Set(prev).add(job.id));
+      setToastMessage('Failed to undo hide');
+      setToastOpen(true);
+    }
+  };
+
   useEffect(() => {
     async function loadData() {
       try {
         setLoading(true);
-        const [jobsData, savedJobsData] = await Promise.all([
-          getJobs({ status: 'published' }),
-          user && userRole === 'seeker' ? getSavedJobs(user.id) : Promise.resolve([])
-        ]);
+
+        const apiCalls: Promise<any>[] = [
+          getJobs({
+            status: 'published',
+            page,
+            limit: pageSize,
+            ...filters
+          })
+        ];
+
+        if (user && userRole === 'seeker') {
+          apiCalls.push(getSavedJobs(user.id));
+          apiCalls.push(getHiddenJobIds(user.id));
+        }
+
+        const results = await Promise.all(apiCalls);
+        const { data: jobsData, count } = results[0];
         setJobs(jobsData);
-        setSavedJobIds(new Set(savedJobsData.map(j => j.id)));
+        // Calculate total pages based on count
+        // Note: we can store totalCount state if needed, but for now we just need totalPages
+        // Since totalPages is derived, we need a state for it if it comes from server
+        // Let's add setTotalPages state
+
+        if (results[1]) {
+          setSavedJobIds(new Set(results[1].map((j: any) => j.id)));
+        }
+        if (results[2]) {
+          setHiddenJobIds(new Set(results[2]));
+        }
+
+        // Return count to update totalPages
+        return count;
+
       } catch (error) {
         console.error('Error loading jobs:', error);
+        return 0;
       } finally {
         setLoading(false);
       }
     }
-    loadData();
-  }, [user, userRole]);
 
-  useEffect(() => {
-    async function loadResumes() {
-      try {
-        if (user && userRole === 'seeker') {
-          const docs = await getUserDocuments(user.id);
-          // Map to Resume type if needed, but getUserDocuments should return compatible types or we map here
-          // Assuming docs are compatible or we just use them.
-          // Let's verify type compatibility briefly. getUserDocuments returns 'any[]' in some contexts or typed.
-          // Based on previous code, we might need mapping.
-          // Checking previous JobsList content, it just used setResumes(docs).
-          setResumes(docs as unknown as Resume[]);
-        }
-      } catch (error) {
-        console.error('Error loading resumes:', error);
-      }
-    }
-    loadResumes();
-  }, [user, userRole]);
-
-  const filteredJobs = useMemo(() => {
-    let result = jobs.filter((job) => {
-      const matchesKeyword =
-        filters.keyword === '' ||
-        job.roleType.toLowerCase().includes(filters.keyword.toLowerCase()) ||
-        job.clinicName.toLowerCase().includes(filters.keyword.toLowerCase()) ||
-        job.specialtyTags.some((tag) => tag.toLowerCase().includes(filters.keyword.toLowerCase()));
-      const matchesLocation =
-        filters.location === '' ||
-        job.city.toLowerCase().includes(filters.location.toLowerCase()) ||
-        job.country.toLowerCase().includes(filters.location.toLowerCase());
-      const matchesSpecialty =
-        filters.specialty === '' || job.specialtyTags.includes(filters.specialty);
-      const matchesType = filters.employmentType === '' || job.employmentType === filters.employmentType;
-      const matchesShift = filters.shiftType === '' || job.shiftType === filters.shiftType;
-      const matchesExperience =
-        filters.experienceLevel === '' || job.experienceLevel === filters.experienceLevel;
-      const matchesNewGrad = !filters.newGrad || job.newGradWelcome;
-      const matchesTraining = !filters.training || job.trainingProvided;
-      const matchesInternship = !filters.internship || job.internshipAvailable;
-
-      const salaryMatches = (() => {
-        if (filters.salaryMin === 0) return true;
-
-        // Determine effective min and max salaries
-        let effectiveMin = 0;
-        let effectiveMax = 0;
-
-        if (job.salaryMin !== undefined || job.salaryMax !== undefined) {
-          effectiveMin = job.salaryMin || 0;
-          effectiveMax = job.salaryMax || effectiveMin;
-        } else {
-          // Fallback to parsing string (legacy support)
-          const numbers = job.salaryRange.match(/\d[\d,]*/g) ?? [];
-          effectiveMin = numbers[0] ? parseInt(numbers[0].replace(/,/g, ''), 10) : 0;
-          effectiveMax = numbers[1] ? parseInt(numbers[1].replace(/,/g, ''), 10) : effectiveMin;
-        }
-
-        // Check against max salary as per previous logic
-        return effectiveMax >= filters.salaryMin;
-      })();
-
-      return (
-        matchesKeyword &&
-        matchesLocation &&
-        matchesSpecialty &&
-        matchesType &&
-        matchesShift &&
-        matchesExperience &&
-        matchesNewGrad &&
-        matchesTraining &&
-        matchesInternship &&
-        salaryMatches
-      );
+    loadData().then(count => {
+      setTotalCount(count);
     });
+  }, [user, userRole, filters, page]); // Depend on filters and page to trigger refetch
 
-    if (sortBy === 'newest') {
-      result = [...result].sort(
-        (a, b) => new Date(b.postedAt).getTime() - new Date(a.postedAt).getTime()
-      );
-    } else if (sortBy === 'salary') {
-      const parseSalary = (salaryRange: string) => parseInt(salaryRange.replace(/[^0-9]/g, '').slice(0, 4), 10);
-      result = [...result].sort((a, b) => parseSalary(b.salaryRange) - parseSalary(a.salaryRange));
-    }
+  // Removed filteredJobs useMemo as filtering is server-side
 
-    return result;
-  }, [jobs, filters, sortBy]);
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
-  const totalPages = Math.max(1, Math.ceil(filteredJobs.length / pageSize));
-  const pageJobs = filteredJobs.slice((page - 1) * pageSize, page * pageSize);
+  // pageJobs is now just 'jobs' because we only fetch the current page
+  const pageJobs = jobs;
 
   const handleFilterChange = (val: JobFilterState) => {
     setFilters(val);
@@ -215,7 +222,7 @@ export default function JobsList() {
             <p className="text-sm font-semibold text-brand">Job Board</p>
             <h1 className="text-2xl font-bold text-gray-900">Find your next dental role</h1>
             <p className="text-sm text-gray-600">
-              {loading ? 'Loading jobs...' : `${filteredJobs.length} jobs - filters update instantly`}
+              {loading ? 'Loading jobs...' : `${totalCount} jobs - filters update instantly`}
             </p>
           </div>
         </div>
@@ -242,6 +249,9 @@ export default function JobsList() {
                   onApply={handleApplyClick}
                   isSaved={savedJobIds.has(job.id)}
                   onToggleSave={handleToggleSave}
+                  onHide={handleHideJob}
+                  isHidden={hiddenJobIds.has(job.id)}
+                  onUndo={() => handleUndoHide(job)}
                 />
               ))}
               {pageJobs.length === 0 && (
@@ -261,9 +271,10 @@ export default function JobsList() {
       <Toast
         open={toastOpen}
         onClose={() => setToastOpen(false)}
-        title={toastMessage.includes('successfully') ? 'Success' : toastMessage.includes('removed') ? 'Success' : 'Error'}
+        title={toastMessage.includes('hidden') ? 'Job Hidden' : toastMessage.includes('successfully') ? 'Success' : toastMessage.includes('removed') ? 'Success' : 'Error'}
         description={toastMessage}
-        variant={toastMessage.includes('successfully') || toastMessage.includes('removed') ? 'success' : 'error'}
+        variant={toastMessage.includes('FAILED') ? 'error' : 'success'}
+        action={undefined}
       />
     </AppShell>
   );

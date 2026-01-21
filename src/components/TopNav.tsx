@@ -32,9 +32,9 @@ export function TopNav() {
       return [{ to: '/admin', label: 'Admin Console' }];
     }
     return [
-      { to: '/seekers', label: 'Seekers Home', icon: <User2 className="h-4 w-4" /> },
+      { to: '/seekers', label: 'Seekers Home', icon: <User2 className="h-4 w-4" />, end: true },
       { to: '/jobs', label: 'Jobs', icon: <Briefcase className="h-4 w-4" /> },
-      { to: '/student/profile', label: 'Student Dashboard', icon: <LayoutDashboard className="h-4 w-4" /> }
+      { to: '/seekers/dashboard', label: 'Seekers Dashboard', icon: <LayoutDashboard className="h-4 w-4" /> }
     ];
   }, [activeRole]);
 
@@ -69,7 +69,7 @@ export function TopNav() {
 
           <nav className="hidden items-center gap-2 text-sm font-medium text-gray-700 lg:flex">
             {navLinks.map((link) => (
-              <NavItem key={link.to} to={link.to} label={link.label} icon={link.icon} />
+              <NavItem key={link.to} to={link.to} label={link.label} icon={link.icon} end={(link as any).end} />
             ))}
           </nav>
 
@@ -105,7 +105,7 @@ export function TopNav() {
                   if (activeRole === 'employer') {
                     navigate('/employer/profile');
                   } else if (activeRole === 'seeker') {
-                    navigate('/student/profile');
+                    navigate('/seekers/dashboard');
                   }
                 }}
                 title="Your Profile"
@@ -170,10 +170,11 @@ export function TopNav() {
   );
 }
 
-function NavItem({ to, label, icon }: { to: string; label: string; icon?: ReactNode }) {
+function NavItem({ to, label, icon, end }: { to: string; label: string; icon?: ReactNode; end?: boolean }) {
   return (
     <NavLink
       to={to}
+      end={end}
       className={({ isActive }) =>
         cn(
           'flex items-center gap-2 rounded-full px-4 py-2 transition hover:bg-brand/10 hover:text-brand',

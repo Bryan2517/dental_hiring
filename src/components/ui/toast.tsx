@@ -10,6 +10,7 @@ interface ToastProps {
   description?: ReactNode;
   variant?: 'success' | 'info' | 'warning' | 'error';
   duration?: number;
+  action?: ReactNode;
 }
 
 export function Toast({
@@ -18,13 +19,17 @@ export function Toast({
   title,
   description,
   variant = 'success',
-  duration = 2500
+  duration = 2500,
+  action
 }: ToastProps) {
   useEffect(() => {
     if (!open) return;
-    const timer = setTimeout(onClose, duration);
+    // If there is an action (like Undo), we might want to keep it open longer or indefinitely until user interacts?
+    // For now, let's keep the auto-close behavior, maybe extend duration if action is present?
+    const effectiveDuration = action ? 5000 : duration;
+    const timer = setTimeout(onClose, effectiveDuration);
     return () => clearTimeout(timer);
-  }, [open, duration, onClose]);
+  }, [open, duration, onClose, action]);
 
   if (!open) return null;
 
@@ -48,6 +53,11 @@ export function Toast({
           <p className="font-semibold">{title}</p>
           {description && <p className="text-sm text-gray-700">{description}</p>}
         </div>
+        {action && (
+          <div className="mt-0.5 shrink-0">
+            {action}
+          </div>
+        )}
         <button
           onClick={onClose}
           className="rounded-full p-1 text-gray-500 transition hover:bg-white/60"

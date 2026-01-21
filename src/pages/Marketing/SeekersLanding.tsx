@@ -119,7 +119,7 @@ export default function SeekersLanding() {
         });
 
         // 2. Get all published jobs
-        const allJobs = await getJobs({ status: 'published' });
+        const { data: allJobs } = await getJobs({ status: 'published', limit: 100 });
 
         // 3. Sort by popularity (app count)
         const sorted = allJobs.sort((a, b) => {
@@ -162,7 +162,7 @@ export default function SeekersLanding() {
               <Button variant="primary" size="xl" onClick={() => navigate('/jobs')}>
                 Browse Jobs
               </Button>
-              <Button variant="secondary" size="lg" onClick={() => navigate('/student/profile')}>
+              <Button variant="secondary" size="lg" onClick={() => navigate('/seekers/dashboard')}>
                 Create Profile
               </Button>
             </div>

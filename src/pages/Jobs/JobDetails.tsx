@@ -53,7 +53,7 @@ export default function JobDetails() {
           }
 
           // Load similar jobs (same specialty tags)
-          const allJobs = await getJobs({ status: 'published' });
+          const { data: allJobs } = await getJobs({ status: 'published', limit: 20 });
           const similar = allJobs
             .filter((j) => j.id !== jobData.id && j.specialtyTags.some((tag) => jobData.specialtyTags.includes(tag)))
             .slice(0, 3);

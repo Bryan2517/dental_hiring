@@ -69,7 +69,17 @@ export async function getJobs(filters?: {
   specialty?: string;
   employmentType?: string;
   experienceLevel?: string;
-}): Promise<Job[]> {
+  salaryMin?: number;
+  newGrad?: boolean;
+  training?: boolean;
+  internship?: boolean;
+  page?: number;
+  limit?: number;
+}): Promise<{ data: Job[]; count: number }> {
+  const page = filters?.page || 1;
+  const limit = filters?.limit || 6;
+  const offset = (page - 1) * limit;
+
   let query = supabase
     .from('jobs')
     .select(`
@@ -81,7 +91,7 @@ export async function getJobs(filters?: {
         country,
         logo_url
       )
-    `);
+    `, { count: 'exact' });
 
   if (filters?.status) {
     query = query.eq('status', filters.status);
@@ -92,10 +102,33 @@ export async function getJobs(filters?: {
   }
 
   if (filters?.location) {
+    // Search in job city/country OR organization city/country requires a joined filter which is complex in simple queries.
+    // For performance, we'll search base columns on jobs table first.
     query = query.or(`city.ilike.%${filters.location}%,country.ilike.%${filters.location}%`);
   }
 
-  if (filters?.employmentType) {
+  if (filters?.specialty) {
+    query = query.contains('specialty_tags', [filters.specialty]);
+  }
+
+  if (filters?.salaryMin) {
+    // Assuming legacy string parsing is handled on insertion, we rely on numeric columns
+    query = query.gte('salary_max', filters.salaryMin);
+  }
+
+  if (filters?.newGrad) {
+    query = query.eq('new_grad_welcome', true);
+  }
+
+  if (filters?.training) {
+    query = query.eq('training_provided', true);
+  }
+
+  if (filters?.internship) {
+    query = query.eq('internship_available', true);
+  }
+
+  if (filters?.employmentType && filters.employmentType !== '') {
     const empTypeMap: Record<string, string> = {
       'Full-time': 'full_time',
       'Part-time': 'part_time',
@@ -106,7 +139,7 @@ export async function getJobs(filters?: {
     query = query.eq('employment_type', (empTypeMap[filters.employmentType] || filters.employmentType) as Database['public']['Enums']['employment_type']);
   }
 
-  if (filters?.experienceLevel) {
+  if (filters?.experienceLevel && filters.experienceLevel !== '') {
     const expLevelMap: Record<string, string> = {
       'New Grad': 'entry',
       'Junior': 'junior',
@@ -116,17 +149,21 @@ export async function getJobs(filters?: {
     query = query.eq('experience_level', (expLevelMap[filters.experienceLevel] || filters.experienceLevel) as Database['public']['Enums']['experience_level']);
   }
 
-  const { data, error } = await query.order('created_at', { ascending: false });
+  const { data, error, count } = await query
+    .order('created_at', { ascending: false })
+    .range(offset, offset + limit - 1);
 
   if (error) {
     console.error('Error fetching jobs:', error);
     throw error;
   }
 
-  return (data || []).map((item: any) => {
+  const jobs = (data || []).map((item: any) => {
     const org = Array.isArray(item.organizations) ? item.organizations[0] : item.organizations;
     return mapJobToFrontend(item, org);
   });
+
+  return { data: jobs, count: count || 0 };
 }
 
 export async function getJobById(id: string): Promise<Job | null> {
@@ -284,4 +321,43 @@ export async function getSavedJobs(userId: string): Promise<Job[]> {
     const org = Array.isArray(jobData.organizations) ? jobData.organizations[0] : jobData.organizations;
     return mapJobToFrontend(jobData, org);
   });
+}
+
+export async function hideJob(userId: string, jobId: string): Promise<void> {
+  const { error } = await supabase
+    .from('job_hides')
+    .insert({ user_id: userId, job_id: jobId });
+
+  if (error) {
+    if (error.code === '23505') return; // Already hidden
+    console.error('Error hiding job:', error);
+    throw error;
+  }
+}
+
+export async function unhideJob(userId: string, jobId: string): Promise<void> {
+  const { error } = await supabase
+    .from('job_hides')
+    .delete()
+    .eq('user_id', userId)
+    .eq('job_id', jobId);
+
+  if (error) {
+    console.error('Error unhiding job:', error);
+    throw error;
+  }
+}
+
+export async function getHiddenJobIds(userId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('job_hides')
+    .select('job_id')
+    .eq('user_id', userId);
+
+  if (error) {
+    console.error('Error fetching hidden jobs:', error);
+    return [];
+  }
+
+  return data.map((item: any) => item.job_id);
 }

@@ -77,7 +77,7 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
       return <Navigate to="/employer/dashboard" replace />;
     }
     if (userRole === 'seeker') {
-      return <Navigate to="/student/profile" replace />;
+      return <Navigate to="/seekers/dashboard" replace />;
     }
     return <Navigate to="/jobs" replace />;
   }

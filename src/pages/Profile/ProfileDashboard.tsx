@@ -22,7 +22,7 @@ import { extractTextFromPDF } from '../../lib/utils/pdf';
 import { parseResumeWithGemini } from '../../lib/services/resume';
 
 const sidebarLinks = [
-  { to: '/student/profile', label: 'Profile' },
+  { to: '/seekers/dashboard', label: 'Dashboard' },
   { to: '/jobs', label: 'Browse jobs' },
   { to: '/jobs/job-1', label: 'Saved jobs' }
 ];
@@ -348,7 +348,7 @@ export default function ProfileDashboard() {
 
   if (loading && !profileFields.email) {
     return (
-      <DashboardShell sidebarLinks={sidebarLinks} title="Student Dashboard" subtitle="Loading..." hideNavigation>
+      <DashboardShell sidebarLinks={sidebarLinks} title="Seekers Dashboard" subtitle="Loading..." hideNavigation>
         <div className="flex h-64 items-center justify-center">
           <p className="text-gray-500">Loading profile data...</p>
         </div>
@@ -388,11 +388,11 @@ export default function ProfileDashboard() {
   return (
     <DashboardShell
       sidebarLinks={sidebarLinks}
-      title="Student Dashboard"
+      title="Seekers Dashboard"
       subtitle="Manage your dental profile, resumes, and saved jobs."
       hideNavigation
     >
-      <Breadcrumbs items={[{ label: 'Seeker Home', to: '/seekers' }, { label: 'Student Dashboard' }]} />
+      <Breadcrumbs items={[{ label: 'Seeker Home', to: '/seekers' }, { label: 'Seekers Dashboard' }]} />
       <Tabs
         tabs={[
           { id: 'profile', label: 'Profile' },
