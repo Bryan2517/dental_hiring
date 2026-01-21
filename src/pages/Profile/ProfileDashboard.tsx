@@ -721,6 +721,37 @@ export default function ProfileDashboard() {
           </div>
         </div>
       </Modal>
+
+      <Modal
+        open={showApiKeyModal}
+        onClose={() => setShowApiKeyModal(false)}
+        title="Enter Google Gemini API Key"
+        maxWidth="max-w-md"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            To use the Resume Scanner, please provide a free Google Gemini API Key.
+            You can get one from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-brand underline">Google AI Studio</a>.
+          </p>
+          <Input
+            placeholder="AIzaSy..."
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+            type="password"
+          />
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" onClick={() => setShowApiKeyModal(false)}>Cancel</Button>
+            <Button
+              variant="primary"
+              disabled={!apiKey || !tempAnalyzeFile}
+              onClick={() => tempAnalyzeFile && handleResumeAnalysis(apiKey, tempAnalyzeFile)}
+            >
+              Analyze Resume
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
       <Toast
         open={showToast}
         onClose={() => setShowToast(false)}
