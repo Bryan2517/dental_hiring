@@ -263,9 +263,7 @@ export default function ProfileDashboard() {
     setIsAnalyzing(true);
     try {
       // 1. Extract Text
-      console.log('Starting PDF extraction...');
       const text = await extractTextFromPDF(file);
-      console.log('PDF extraction complete, length:', text.length);
 
       if (!text.trim()) {
         throw new Error('Could not extract any text from this PDF. Please try a different file.');
@@ -421,8 +419,7 @@ export default function ProfileDashboard() {
                   accept=".pdf"
                   onChange={(e) => {
                     const file = e.target.files?.[0];
-                    // FORCE ALERT for debugging
-                    alert(`File selected: ${file?.name || 'none'}. Starting analysis...`);
+
 
                     if (file) {
                       setToastContent({
@@ -441,7 +438,6 @@ export default function ProfileDashboard() {
                   className="gap-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border-indigo-100"
                   disabled={isAnalyzing}
                   onClick={() => {
-                    // alert('Button clicked, attempting to open file chooser...');
                     fileInputRef.current?.click();
                   }}
                 >
