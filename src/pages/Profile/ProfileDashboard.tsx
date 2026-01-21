@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { DashboardShell } from '../../layouts/DashboardShell';
 import { Tabs } from '../../components/ui/tabs';
@@ -70,6 +70,7 @@ export default function ProfileDashboard() {
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [tempAnalyzeFile, setTempAnalyzeFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Toast State
   const [showToast, setShowToast] = useState(false);
@@ -412,34 +413,47 @@ export default function ProfileDashboard() {
                 <p className="text-lg font-semibold text-gray-900">Upload a resume</p>
                 <p className="text-sm text-gray-500">Upload your latest resume to be visible to employers.</p>
               </div>
-              <label className="flex cursor-pointer items-center gap-2 rounded-lg bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100 transition">
-                {isAnalyzing ? (
-                  <span>Analyzing...</span>
-                ) : (
-                  <>
-                    <ScanText className="h-4 w-4" />
-                    <span>Auto-fill from Resume</span>
-                    <input
-                      type="file"
-                      className="hidden"
-                      accept=".pdf"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          setToastContent({
-                            title: 'File Selected',
-                            description: `Starting analysis for ${file.name}...`
-                          });
-                          setShowToast(true);
+              <div className="flex items-center gap-2">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  className="hidden"
+                  accept=".pdf"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    // Use window.alert for guaranteed feedback in case toast fails
+                    // alert(`File selected: ${file?.name || 'none'}`); 
 
-                          initiateAnalysis(file);
-                          e.target.value = ''; // Reset so onChange triggers again if same file selected
-                        }
-                      }}
-                    />
-                  </>
-                )}
-              </label>
+                    if (file) {
+                      setToastContent({
+                        title: 'File Selected',
+                        description: `Starting analysis for ${file.name}...`
+                      });
+                      setShowToast(true);
+
+                      initiateAnalysis(file);
+                      e.target.value = ''; // Reset
+                    }
+                  }}
+                />
+                <Button
+                  variant="secondary"
+                  className="gap-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border-indigo-100"
+                  disabled={isAnalyzing}
+                  onClick={() => {
+                    fileInputRef.current?.click();
+                  }}
+                >
+                  {isAnalyzing ? (
+                    <span>Analyzing...</span>
+                  ) : (
+                    <>
+                      <ScanText className="h-4 w-4" />
+                      <span>Auto-fill from Resume</span>
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
             <p className="text-xs text-gray-400">
               Latest resume:{' '}
