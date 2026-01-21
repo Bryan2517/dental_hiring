@@ -425,7 +425,10 @@ export default function ProfileDashboard() {
                       accept=".pdf"
                       onChange={(e) => {
                         const file = e.target.files?.[0];
-                        if (file) initiateAnalysis(file);
+                        if (file) {
+                          initiateAnalysis(file);
+                          e.target.value = ''; // Reset so onChange triggers again if same file selected
+                        }
                       }}
                     />
                   </>
