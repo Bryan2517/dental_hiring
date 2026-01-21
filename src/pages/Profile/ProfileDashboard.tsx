@@ -426,6 +426,12 @@ export default function ProfileDashboard() {
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) {
+                          setToastContent({
+                            title: 'File Selected',
+                            description: `Starting analysis for ${file.name}...`
+                          });
+                          setShowToast(true);
+
                           initiateAnalysis(file);
                           e.target.value = ''; // Reset so onChange triggers again if same file selected
                         }

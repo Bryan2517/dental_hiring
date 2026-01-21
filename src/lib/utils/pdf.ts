@@ -1,11 +1,12 @@
-import * as pdfjsLib from 'pdfjs-dist';
-
-// Initialize the worker with a CDN link to ensure it loads correctly in production
-// This avoids issues with Vite asset handling and Vercel rewrites
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
 
 export async function extractTextFromPDF(file: File): Promise<string> {
     try {
+        // Dynamically import pdfjs-dist only when needed
+        const pdfjsLib = await import('pdfjs-dist');
+
+        // Initialize worker with CDN
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+
         const arrayBuffer = await file.arrayBuffer();
         const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
         const pdf = await loadingTask.promise;
