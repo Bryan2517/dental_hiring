@@ -314,7 +314,7 @@ export default function SeekersLanding() {
           )}
         </div>
         <div className="flex justify-center">
-          <Button variant="outline" asChild>
+          <Button variant="primary" asChild>
             <Link to="/jobs">View more</Link>
           </Button>
         </div>
