@@ -8,6 +8,7 @@ import { ApplyModal } from '../../components/ApplyModal';
 import { Breadcrumbs } from '../../components/Breadcrumbs';
 import { getJobs, saveJob, unsaveJob, getSavedJobs, hideJob, unhideJob, getHiddenJobIds } from '../../lib/api/jobs';
 import { getUserDocuments } from '../../lib/api/profiles';
+import { getApplications } from '../../lib/api/applications';
 import { useAuth } from '../../contexts/AuthContext';
 import { Toast } from '../../components/ui/toast';
 
@@ -39,6 +40,7 @@ export default function JobsList() {
   const [savedJobIds, setSavedJobIds] = useState<Set<string>>(new Set());
   const [hiddenJobIds, setHiddenJobIds] = useState<Set<string>>(new Set());
   const [undoableJobIds, setUndoableJobIds] = useState<Set<string>>(new Set());
+  const [appliedJobIds, setAppliedJobIds] = useState<Set<string>>(new Set());
   const [toastOpen, setToastOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
 
@@ -162,6 +164,8 @@ export default function JobsList() {
         if (user && userRole === 'seeker') {
           apiCalls.push(getSavedJobs(user.id));
           apiCalls.push(getHiddenJobIds(user.id));
+          apiCalls.push(getUserDocuments(user.id));
+          apiCalls.push(getApplications({ seeker_user_id: user.id }));
         }
 
         const results = await Promise.all(apiCalls);
@@ -177,6 +181,12 @@ export default function JobsList() {
         }
         if (results[2]) {
           setHiddenJobIds(new Set(results[2]));
+        }
+        if (results[3]) {
+          setResumes(results[3]);
+        }
+        if (results[4]) {
+          setAppliedJobIds(new Set(results[4].map((a: any) => a.jobId)));
         }
 
         // Return count to update totalPages
@@ -252,6 +262,7 @@ export default function JobsList() {
                   onHide={handleHideJob}
                   isHidden={hiddenJobIds.has(job.id)}
                   onUndo={() => handleUndoHide(job)}
+                  hasApplied={appliedJobIds.has(job.id)}
                 />
               ))}
               {pageJobs.length === 0 && (
@@ -266,7 +277,17 @@ export default function JobsList() {
         <Pagination page={page} totalPages={totalPages} onChange={setPage} />
       </div>
 
-      <ApplyModal open={!!selectedJob} job={selectedJob} onClose={() => setSelectedJob(undefined)} resumes={resumes as any[]} />
+      <ApplyModal
+        open={!!selectedJob}
+        job={selectedJob}
+        onClose={() => setSelectedJob(undefined)}
+        resumes={resumes}
+        onSuccess={() => {
+          if (selectedJob) {
+            setAppliedJobIds(prev => new Set(prev).add(selectedJob.id));
+          }
+        }}
+      />
 
       <Toast
         open={toastOpen}

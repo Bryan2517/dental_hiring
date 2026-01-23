@@ -3,7 +3,7 @@ import { cn } from '../../lib/utils';
 
 export interface TabItem {
   id: string;
-  label: string;
+  label: string | ReactNode;
 }
 
 interface TabsProps {

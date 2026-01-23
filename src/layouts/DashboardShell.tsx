@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
 import { AppShell } from './AppShell';
 import { Sidebar, SidebarLink } from '../components/Sidebar';
+import { cn } from '../lib/utils';
 
 interface DashboardShellProps {
   children: ReactNode;
@@ -9,6 +10,7 @@ interface DashboardShellProps {
   subtitle?: string;
   actions?: ReactNode;
   hideNavigation?: boolean;
+  padded?: boolean;
 }
 
 export function DashboardShell({
@@ -17,21 +19,24 @@ export function DashboardShell({
   title,
   subtitle,
   actions,
-  hideNavigation
+  hideNavigation,
+  padded = true
 }: DashboardShellProps) {
   return (
-    <AppShell padded background="muted" showFooter={false}>
-      <div className="flex flex-col gap-6">
+    <AppShell padded={padded} background="muted" showFooter={false}>
+      <div className={cn("flex flex-col", padded && "gap-6")}>
         {!hideNavigation && (
           <Sidebar title="Navigation" links={sidebarLinks} orientation="horizontal" />
         )}
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
-            {subtitle && <p className="text-gray-600">{subtitle}</p>}
+        {(title || actions) && (
+          <div className={cn("flex flex-wrap items-start justify-between gap-3", !padded && "px-4 pt-4")}>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
+              {subtitle && <p className="text-gray-600">{subtitle}</p>}
+            </div>
+            {actions}
           </div>
-          {actions}
-        </div>
+        )}
         {children}
       </div>
     </AppShell>

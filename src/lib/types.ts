@@ -45,6 +45,7 @@ export interface Candidate {
   jobTitle: string;
   isFavorite?: boolean;
   resumePath?: string;
+  seekerId?: string;
 }
 
 
@@ -57,6 +58,42 @@ export interface Application {
   jobTitle?: string;
   clinicName?: string;
   location?: string;
+  orgId: string;
+}
+
+
+export interface Message {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  content: string;
+  createdAt: string;
+  readAt?: string | null;
+  attachmentUrl?: string | null;
+  attachmentName?: string | null;
+  attachmentSize?: number | null;
+}
+
+export interface Conversation {
+  id: string;
+  orgId: string;
+  seekerId: string;
+  jobId?: string | null;
+  createdAt: string;
+  lastMessageAt: string;
+  organization?: {
+    org_name: string;
+    logo_url?: string | null;
+  };
+  seeker?: {
+    full_name: string;
+    avatar_url?: string | null;
+  };
+  job?: {
+    title: string;
+  };
+  lastMessage?: Message; // Virtual field for UI
+  unreadCount?: number;
 }
 
 export interface Resume {

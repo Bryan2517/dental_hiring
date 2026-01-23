@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { MessageCircle } from 'lucide-react';
 import { DashboardShell } from '../../layouts/DashboardShell';
 import { Candidate, JobStage } from '../../lib/types';
 import { KanbanBoard } from '../../components/KanbanBoard';
@@ -13,6 +14,7 @@ import { Button } from '../../components/ui/button';
 import { Toast } from '../../components/ui/toast';
 import { ShareModal } from '../../components/ShareModal';
 import { useAuth } from '../../contexts/AuthContext';
+import { useChat } from '@/contexts/ChatContext';
 import { supabase } from '../../lib/supabase';
 import { getCandidatesForOrg, updateApplicationStatus, toggleCandidateFavorite } from '../../lib/api/applications';
 
@@ -25,6 +27,7 @@ const sidebarLinks = [
 
 export default function ApplicantsPipeline() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [jobs, setJobs] = useState<{ id: string, title: string }[]>([]);
@@ -37,6 +40,10 @@ export default function ApplicantsPipeline() {
 
   const [selectedJobId, setSelectedJobId] = useState<string>(searchParams.get('jobId') || '');
   const [showShareModal, setShowShareModal] = useState(false);
+  const [orgId, setOrgId] = useState<string | null>(null);
+  const { conversations } = useChat();
+
+  const totalUnreadCount = conversations.reduce((acc, curr) => acc + (curr.unreadCount || 0), 0);
 
   // Get current job title
   const currentJob = jobs.find(j => j.id === selectedJobId);
@@ -62,6 +69,7 @@ export default function ApplicantsPipeline() {
 
         if (orgError) throw orgError;
         if (org) {
+          setOrgId(org.id);
           // Fetch candidates and jobs in parallel
           const [candidatesData, jobsData] = await Promise.all([
             getCandidatesForOrg(org.id),
@@ -232,6 +240,22 @@ export default function ApplicantsPipeline() {
           <Button variant="secondary" size="sm" onClick={() => setShowShareModal(true)} disabled={!selectedJobId}>
             Invite candidate
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate(orgId ? `/messages?orgId=${orgId}` : '/messages')}
+            className="relative"
+          >
+            <div className="flex items-center gap-2">
+              <MessageCircle className="h-4 w-4" />
+              Chat
+              {totalUnreadCount > 0 && (
+                <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white ml-1">
+                  {totalUnreadCount}
+                </span>
+              )}
+            </div>
+          </Button>
           <Button variant="outline" size="sm" onClick={handleExport}>
             Export list
           </Button>
@@ -347,6 +371,7 @@ export default function ApplicantsPipeline() {
 
       <CandidateDrawer
         candidate={selectedCandidate}
+        orgId={orgId}
         open={!!selectedCandidate}
         onClose={() => setSelectedCandidate(undefined)}
         onMove={(id, status) => {

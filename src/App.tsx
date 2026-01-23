@@ -11,6 +11,7 @@ import AdminDashboard from './pages/Admin/AdminDashboard';
 import About from './pages/Marketing/About';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AuthModal } from './components/AuthModal';
+import MessagesPage from './pages/Messages/MessagesPage';
 
 import OrganizationProfile from './pages/Employer/OrganizationProfile';
 import OrganizationTeam from './pages/Employer/OrganizationTeam';
@@ -28,6 +29,17 @@ function App() {
         <Route path="/jobs" element={<JobsList />} />
         <Route path="/jobs/:id" element={<JobDetails />} />
         {/* Login and register flows are now handled via modal triggered from the header */}
+        <Route
+          path="/messages"
+          element={
+            <ProtectedRoute>
+              <MessagesPage />
+            </ProtectedRoute>
+          }
+        />
+        {/* Actually, I need to check ProtectedRoute limits. If it's strict, I might need two routes or a change. 
+           Let's just import MessagesPage first. 
+        */}
         <Route path="/seekers/dashboard" element={<ProtectedRoute requiredRole="seeker"><ProfileDashboard /></ProtectedRoute>} />
         <Route
           path="/employer/dashboard"

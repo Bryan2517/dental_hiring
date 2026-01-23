@@ -2,7 +2,7 @@ import { ButtonHTMLAttributes, ReactElement, ReactNode, cloneElement, isValidEle
 import { cn } from '../../lib/utils';
 
 type Variant = 'primary' | 'secondary' | 'outline' | 'ghost';
-type Size = 'sm' | 'md' | 'lg' | 'xl';
+type Size = 'sm' | 'md' | 'lg' | 'xl' | 'icon';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
@@ -39,7 +39,8 @@ export function Button({
     sm: 'text-sm px-4 py-2.5',
     md: 'text-sm px-5 py-3',
     lg: 'text-base px-6 py-3.5',
-    xl: 'text-lg px-8 py-4'
+    xl: 'text-lg px-8 py-4',
+    icon: 'h-10 w-10 p-2 flex items-center justify-center'
   };
 
   const classes = cn(

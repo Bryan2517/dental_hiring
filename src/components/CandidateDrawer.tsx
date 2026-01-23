@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
-import { X, FileText, ExternalLink } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { X, FileText, ExternalLink, MessageCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { updateApplicationNotes } from '../lib/api/applications';
 import { Candidate, JobStage } from '../lib/types';
@@ -13,11 +14,13 @@ interface CandidateDrawerProps {
   open: boolean;
   onClose: () => void;
   onMove: (id: string, status: JobStage) => void;
+  orgId?: string | null;
 }
 
 const actions: JobStage[] = ['Shortlisted', 'Interview', 'Offer', 'Rejected'];
 
-export function CandidateDrawer({ candidate, open, onClose, onMove }: CandidateDrawerProps) {
+export function CandidateDrawer({ candidate, open, onClose, onMove, orgId }: CandidateDrawerProps) {
+  const navigate = useNavigate();
   const [resumeUrl, setResumeUrl] = useState<string | null>(null);
   const [loadingResume, setLoadingResume] = useState(false);
   const [notes, setNotes] = useState('');
@@ -76,7 +79,20 @@ export function CandidateDrawer({ candidate, open, onClose, onMove }: CandidateD
         </div>
         <div className="space-y-5 p-5">
           <div>
-            <p className="text-sm font-semibold text-gray-800">Skills</p>
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold text-gray-800">Skills</p>
+              {candidate.seekerId && orgId && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 gap-1.5 px-2 text-xs text-brand hover:bg-brand/10 hover:text-brand whitespace-nowrap"
+                  icon={<MessageCircle className="h-3.5 w-3.5" />}
+                  onClick={() => navigate(`/messages?orgId=${orgId}&seekerId=${candidate.seekerId}`)}
+                >
+                  Chat with candidate
+                </Button>
+              )}
+            </div>
             <div className="mt-2 flex flex-wrap gap-2">
               {candidate.skills.map((skill) => (
                 <TagPill key={skill} label={skill} />

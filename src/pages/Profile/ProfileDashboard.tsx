@@ -1,4 +1,8 @@
 import { useEffect, useMemo, useState, useRef } from 'react';
+import ConversationList from '../Messages/ConversationList';
+import ChatWindow from '../Messages/ChatWindow';
+
+
 import { Link, useNavigate } from 'react-router-dom';
 import { DashboardShell } from '../../layouts/DashboardShell';
 import { Tabs } from '../../components/ui/tabs';
@@ -13,8 +17,9 @@ import { JobStage, Resume } from '../../lib/types';
 import { formatDate } from '../../lib/utils';
 import { getSavedJobs, unsaveJob } from '../../lib/api/jobs';
 import { Breadcrumbs } from '../../components/Breadcrumbs';
-import { UploadCloud, ScanText } from 'lucide-react';
+import { UploadCloud, ScanText, MessageCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useChat } from '../../contexts/ChatContext';
 import { supabase } from '../../lib/supabase';
 import { Database } from '../../lib/database.types';
 import { getApplications } from '../../lib/api/applications';
@@ -43,6 +48,7 @@ import { Toast } from '../../components/ui/toast';
 
 export default function ProfileDashboard() {
   const { user, signOut } = useAuth();
+  const { unreadTotal, openChat } = useChat();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('profile');
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
@@ -397,7 +403,20 @@ export default function ProfileDashboard() {
         tabs={[
           { id: 'profile', label: 'Profile' },
           { id: 'applications', label: 'Applications' },
-          { id: 'saved', label: 'Saved jobs' }
+          { id: 'saved', label: 'Saved jobs' },
+          {
+            id: 'chat',
+            label: (
+              <span className="flex items-center gap-2">
+                Chat
+                {unreadTotal > 0 && (
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                    {unreadTotal}
+                  </span>
+                )}
+              </span>
+            )
+          }
         ]}
         active={activeTab}
         onChange={setActiveTab}
@@ -580,19 +599,18 @@ export default function ProfileDashboard() {
                 <p className="text-sm text-gray-500 text-center py-4">No applications found.</p>
               ) : (
                 filteredApplications.map((app) => (
-                  <div key={app.id} className="rounded-xl border border-gray-100 bg-white p-4 transition hover:border-brand/40 hover:shadow-sm">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <h4 className="font-semibold text-gray-900">{app.jobTitle}</h4>
-                        <div className="mt-1 flex flex-col gap-0.5 text-sm text-gray-500">
-                          <span className="font-medium text-gray-700">{app.clinicName}</span>
-                          <span>{app.location}</span>
+                  <div
+                    key={app.id}
+                    className="rounded-xl border border-gray-100 bg-white p-6 transition hover:border-brand/40 hover:shadow-md cursor-pointer group"
+                    onClick={() => navigate(`/jobs/${app.jobId}`)}
+                  >
+                    <div className="flex flex-col gap-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <h4 className="font-bold text-gray-900 text-lg">{app.clinicName}</h4>
+                          <p className="text-gray-600 font-medium">{app.jobTitle}</p>
+                          <p className="text-sm text-gray-500 mt-1">{app.location}</p>
                         </div>
-                        <div className="mt-3 flex items-center gap-2 text-xs text-gray-400">
-                          <span>Applied {formatDate(app.appliedAt)}</span>
-                        </div>
-                      </div>
-                      <div>
                         <Badge variant={
                           app.status === 'Applied' ? 'default' :
                             app.status === 'Shortlisted' ? 'info' :
@@ -602,6 +620,39 @@ export default function ProfileDashboard() {
                         }>
                           {app.status}
                         </Badge>
+                      </div>
+
+                      <div className="flex items-center justify-between mt-2">
+                        <div className="flex items-center gap-2 text-xs text-gray-400">
+                          <span>Applied {formatDate(app.appliedAt)}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/jobs/${app.jobId}`);
+                            }}
+                          >
+                            Details
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            icon={<MessageCircle className="h-4 w-4" />}
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              if (user) {
+                                /* We pass the organization ID (employer ID) to openChat */
+                                await openChat(app.orgId, user.id, app.jobId);
+                                setActiveTab('chat');
+                              }
+                            }}
+                          >
+                            Chat
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -636,6 +687,21 @@ export default function ProfileDashboard() {
                   />
                 ))
               )}
+            </div>
+          </div>
+        )
+      }
+
+      {
+        activeTab === 'chat' && (
+          <div className="h-[calc(100vh-250px)] min-h-[500px] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+            <div className="grid h-full grid-cols-1 overflow-hidden md:grid-cols-12">
+              <div className="h-full overflow-hidden border-r border-gray-200 md:col-span-4 lg:col-span-3">
+                <ConversationList />
+              </div>
+              <div className="h-full overflow-hidden md:col-span-8 lg:col-span-9">
+                <ChatWindow />
+              </div>
             </div>
           </div>
         )

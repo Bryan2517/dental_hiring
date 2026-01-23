@@ -9,13 +9,20 @@ import { Toast } from './ui/toast';
 import { useAuth } from '../contexts/AuthContext';
 
 export function TopNav() {
+  const { userRole, signOut, user, openAuthModal } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
+  const [showSignOutToast, setShowSignOutToast] = useState(false);
+
   const activeRole = useMemo<Role>(() => {
     const path = location.pathname;
     if (path.startsWith('/admin')) return 'admin';
     if (path.startsWith('/employer') || path.startsWith('/employers')) return 'employer';
+    // If on a shared route like /messages, fallback to the user's actual role
+    if (path.startsWith('/messages') && userRole) return userRole as Role;
     return 'seeker';
-  }, [location.pathname]);
+  }, [location.pathname, userRole]);
 
   const navLinks = useMemo(() => {
     if (activeRole === 'employer') {
@@ -37,11 +44,6 @@ export function TopNav() {
       { to: '/seekers/dashboard', label: 'Seekers Dashboard', icon: <LayoutDashboard className="h-4 w-4" /> }
     ];
   }, [activeRole]);
-
-  const { signOut, user, openAuthModal } = useAuth();
-  const navigate = useNavigate();
-  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
-  const [showSignOutToast, setShowSignOutToast] = useState(false);
 
   const handleSignOutClick = () => {
     setShowSignOutConfirm(true);

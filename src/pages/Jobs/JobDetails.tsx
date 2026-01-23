@@ -5,12 +5,13 @@ import { Badge } from '../../components/ui/badge';
 import { TagPill } from '../../components/TagPill';
 import { Button } from '../../components/ui/button';
 import { ApplyModal } from '../../components/ApplyModal';
-import { Building2, MapPin, Share2, ShieldCheck, Sparkles, Star, Wallet } from 'lucide-react';
+import { Building2, MapPin, Share2, ShieldCheck, Sparkles, Star, Wallet, Check } from 'lucide-react';
 import { Job } from '../../lib/types';
 import { timeAgo } from '../../lib/utils';
 import { Breadcrumbs } from '../../components/Breadcrumbs';
 import { getJobById, getJobs, saveJob, unsaveJob, getSavedJobs } from '../../lib/api/jobs';
 import { getUserDocuments } from '../../lib/api/profiles';
+import { getApplications } from '../../lib/api/applications';
 import { useAuth } from '../../contexts/AuthContext';
 import { Toast } from '../../components/ui/toast';
 
@@ -27,6 +28,7 @@ export default function JobDetails() {
   const [showApply, setShowApply] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const [hasApplied, setHasApplied] = useState(false);
   const [toastOpen, setToastOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
 
@@ -36,10 +38,11 @@ export default function JobDetails() {
       try {
         setLoading(true);
 
-        // Fetch job and saved status in parallel
-        const [jobData, savedJobs] = await Promise.all([
+        // Fetch job, saved status, and application status in parallel
+        const [jobData, savedJobs, applications] = await Promise.all([
           getJobById(id),
-          user && userRole === 'seeker' ? getSavedJobs(user.id) : Promise.resolve([])
+          user && userRole === 'seeker' ? getSavedJobs(user.id) : Promise.resolve([]),
+          user && userRole === 'seeker' ? getApplications({ seeker_user_id: user.id, job_id: id }) : Promise.resolve([])
         ]);
 
         setJob(jobData);
@@ -50,6 +53,13 @@ export default function JobDetails() {
             setIsSaved(true);
           } else {
             setIsSaved(false);
+          }
+
+          // Check if already applied
+          if (applications.length > 0) {
+            setHasApplied(true);
+          } else {
+            setHasApplied(false);
           }
 
           // Load similar jobs (same specialty tags)
@@ -247,9 +257,12 @@ export default function JobDetails() {
             <p className="text-sm text-gray-600">Submit your resume with screening answers.</p>
             <div className="mt-4 flex flex-col gap-2">
               <Button
-                variant="primary"
-                rightIcon={<Sparkles className="h-4 w-4" />}
+                variant={hasApplied ? "outline" : "primary"}
+                rightIcon={hasApplied ? <Check className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
+                disabled={hasApplied}
                 onClick={() => {
+                  if (hasApplied) return;
+
                   if (!user || userRole !== 'seeker') {
                     if (id) {
                       openAuthModal('login', `/jobs/${id}`);
@@ -262,7 +275,7 @@ export default function JobDetails() {
                   setShowApply(true);
                 }}
               >
-                Quick apply
+                {hasApplied ? 'Applied' : 'Quick apply'}
               </Button>
               <Button
                 variant={isSaved ? "primary" : "outline"}
@@ -289,7 +302,13 @@ export default function JobDetails() {
         </div>
       </div>
 
-      <ApplyModal open={showApply} job={job as Job} onClose={() => setShowApply(false)} resumes={resumes} />
+      <ApplyModal
+        open={showApply}
+        job={job as Job}
+        onClose={() => setShowApply(false)}
+        resumes={resumes}
+        onSuccess={() => setHasApplied(true)}
+      />
 
       <ShareModal
         open={shareModalOpen}

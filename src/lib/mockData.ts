@@ -563,11 +563,11 @@ export const candidates: Candidate[] = [
 ];
 
 export const applications: Application[] = [
-  { id: 'app-1', jobId: 'job-1', status: 'Applied', appliedAt: '2024-05-12', candidateName: 'Amira Rahman' },
-  { id: 'app-2', jobId: 'job-8', status: 'Shortlisted', appliedAt: '2024-05-10', candidateName: 'Sofia Tan' },
-  { id: 'app-3', jobId: 'job-6', status: 'Interview', appliedAt: '2024-05-08', candidateName: 'Liyana Mohd' },
-  { id: 'app-4', jobId: 'job-3', status: 'Rejected', appliedAt: '2024-05-07', candidateName: 'Joshua Lee' },
-  { id: 'app-5', jobId: 'job-2', status: 'Offer', appliedAt: '2024-05-05', candidateName: 'Darren Lim' }
+  { id: 'app-1', jobId: 'job-1', status: 'Applied', appliedAt: '2024-05-12', candidateName: 'Amira Rahman', orgId: 'org-1' },
+  { id: 'app-2', jobId: 'job-8', status: 'Shortlisted', appliedAt: '2024-05-10', candidateName: 'Sofia Tan', orgId: 'org-1' },
+  { id: 'app-3', jobId: 'job-6', status: 'Interview', appliedAt: '2024-05-08', candidateName: 'Liyana Mohd', orgId: 'org-1' },
+  { id: 'app-4', jobId: 'job-3', status: 'Rejected', appliedAt: '2024-05-07', candidateName: 'Joshua Lee', orgId: 'org-1' },
+  { id: 'app-5', jobId: 'job-2', status: 'Offer', appliedAt: '2024-05-05', candidateName: 'Darren Lim', orgId: 'org-1' }
 ];
 
 export const resumes: Resume[] = [

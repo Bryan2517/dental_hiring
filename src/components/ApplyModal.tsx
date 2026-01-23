@@ -15,9 +15,10 @@ interface ApplyModalProps {
   job?: Job;
   onClose: () => void;
   resumes: Resume[];
+  onSuccess?: () => void;
 }
 
-export function ApplyModal({ open, job, onClose, resumes }: ApplyModalProps) {
+export function ApplyModal({ open, job, onClose, resumes, onSuccess }: ApplyModalProps) {
   const { user, userRole, openAuthModal } = useAuth();
   const [selectedResume, setSelectedResume] = useState<string>('');
   const [uploadedFile, setUploadedFile] = useState<string>('');
@@ -34,6 +35,10 @@ export function ApplyModal({ open, job, onClose, resumes }: ApplyModalProps) {
     if (open && (!user || userRole !== 'seeker')) {
       onClose();
       openAuthModal('login', job ? `/jobs/${job.id}` : '/jobs');
+    }
+    if (!open) {
+      // Reset selection when closed so it re-calculates default on next open
+      setSelectedResume('');
     }
   }, [open, user, userRole, openAuthModal, onClose, job]);
 
@@ -99,6 +104,10 @@ export function ApplyModal({ open, job, onClose, resumes }: ApplyModalProps) {
       });
       setShowToast(true);
 
+      if (onSuccess) {
+        onSuccess();
+      }
+
       setTimeout(() => {
         setShowToast(false);
         onClose();
@@ -125,13 +134,15 @@ export function ApplyModal({ open, job, onClose, resumes }: ApplyModalProps) {
   useEffect(() => {
     if (open && validResumes.length > 0) {
       const defaultResume = validResumes.find(r => r.isDefault);
+      // Always prioritize default resume if found, 
+      // or fallback to first resume if nothing is selected yet
       if (defaultResume) {
         setSelectedResume(defaultResume.id);
       } else if (!selectedResume) {
         setSelectedResume(validResumes[0].id);
       }
     }
-  }, [open, validResumes]);
+  }, [open, validResumes, selectedResume]);
 
   // Don't render modal if user is not authenticated
   if (!user || userRole !== 'seeker') {

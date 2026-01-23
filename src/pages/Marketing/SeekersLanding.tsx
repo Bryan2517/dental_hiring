@@ -12,7 +12,7 @@ import { Job } from '../../lib/types';
 import { getJobs } from '../../lib/api/jobs';
 import { supabase } from '../../lib/supabase';
 import { TrendingUp, Building2, MapPin, Users } from 'lucide-react';
-import { getSavedJobs, saveJob, unsaveJob } from '../../lib/api/jobs';
+import { getSavedJobs, saveJob, unsaveJob, hideJob, unhideJob, getHiddenJobIds } from '../../lib/api/jobs';
 import { useAuth } from '../../contexts/AuthContext';
 import { Toast } from '../../components/ui/toast';
 
@@ -49,6 +49,8 @@ export default function SeekersLanding() {
   const { user, userRole, openAuthModal } = useAuth();
 
   const [savedJobIds, setSavedJobIds] = useState<Set<string>>(new Set());
+  const [hiddenJobIds, setHiddenJobIds] = useState<Set<string>>(new Set());
+  const [undoableJobIds, setUndoableJobIds] = useState<Set<string>>(new Set());
   const [toastOpen, setToastOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
 
@@ -91,17 +93,77 @@ export default function SeekersLanding() {
     }
   };
 
+  const handleHideJob = async (job: Job) => {
+    if (!user || userRole !== 'seeker') {
+      openAuthModal('login', window.location.pathname);
+      return;
+    }
+
+    // Optimistic update: Add to both hidden and undoable
+    setHiddenJobIds(prev => new Set(prev).add(job.id));
+    setUndoableJobIds(prev => new Set(prev).add(job.id));
+
+    try {
+      await hideJob(user.id, job.id);
+    } catch (error) {
+      console.error('Error hiding job:', error);
+      // Revert
+      setHiddenJobIds(prev => {
+        const next = new Set(prev);
+        next.delete(job.id);
+        return next;
+      });
+      setUndoableJobIds(prev => {
+        const next = new Set(prev);
+        next.delete(job.id);
+        return next;
+      });
+      setToastMessage('Failed to hide job');
+      setToastOpen(true);
+    }
+  };
+
+  const handleUndoHide = async (job: Job) => {
+    // Optimistic revert
+    setHiddenJobIds(prev => {
+      const next = new Set(prev);
+      next.delete(job.id);
+      return next;
+    });
+    setUndoableJobIds(prev => {
+      const next = new Set(prev);
+      next.delete(job.id);
+      return next;
+    });
+
+    try {
+      await unhideJob(user.id, job.id);
+    } catch (error) {
+      console.error('Error undoing hide:', error);
+      // Revert the revert if failed (re-hide)
+      setHiddenJobIds(prev => new Set(prev).add(job.id));
+      setUndoableJobIds(prev => new Set(prev).add(job.id));
+      setToastMessage('Failed to undo hide');
+      setToastOpen(true);
+    }
+  };
+
   useEffect(() => {
     async function loadSavedJobsData() {
       if (user && userRole === 'seeker') {
         try {
-          const saved = await getSavedJobs(user.id);
+          const [saved, hidden] = await Promise.all([
+            getSavedJobs(user.id),
+            getHiddenJobIds(user.id)
+          ]);
           setSavedJobIds(new Set(saved.map(j => j.id)));
+          setHiddenJobIds(new Set(hidden));
         } catch (error) {
-          console.error('Error loading saved jobs:', error);
+          console.error('Error loading user job data:', error);
         }
       } else {
         setSavedJobIds(new Set());
+        setHiddenJobIds(new Set());
       }
     }
     loadSavedJobsData();
@@ -244,6 +306,9 @@ export default function SeekersLanding() {
                 onApply={setSelectedJob}
                 isSaved={savedJobIds.has(job.id)}
                 onToggleSave={handleToggleSave}
+                onHide={handleHideJob}
+                isHidden={hiddenJobIds.has(job.id)}
+                onUndo={() => handleUndoHide(job)}
               />
             ))
           )}

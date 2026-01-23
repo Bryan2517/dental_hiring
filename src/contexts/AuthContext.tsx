@@ -82,6 +82,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await handleSessionUpdate(initialSession);
       } catch (error) {
         console.error('Error initializing auth session:', error);
+        // Force sign out to clear invalid tokens/state
+        await supabase.auth.signOut();
         if (isMounted) {
           setLoading(false);
         }

@@ -23,6 +23,7 @@ function mapApplicationToFrontend(
     jobTitle: job?.title || 'Unknown Job',
     clinicName: job?.organizations?.org_name || 'Unknown Clinic',
     location: job?.city || job?.organizations?.city || '',
+    orgId: job?.org_id || job?.organizations?.id || '',
   };
 }
 
@@ -50,7 +51,8 @@ function mapApplicationToCandidate(
     jobId: app.job_id,
     jobTitle: job?.title || 'Unknown Role',
     isFavorite: app.is_favorite,
-    resumePath: resume?.storage_path
+    resumePath: resume?.storage_path,
+    seekerId: profile?.id
   };
 }
 
@@ -72,7 +74,9 @@ export async function getApplications(filters?: {
       jobs!applications_job_id_fkey (
         title,
         city,
+        org_id,
         organizations (
+          id,
           org_name,
           city,
           state

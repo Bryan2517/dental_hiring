@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import type { KeyboardEvent } from 'react';
-import { Building2, MapPin, Sparkles, Star, Bookmark, X, Undo2, EyeOff } from 'lucide-react';
+import { Building2, MapPin, Sparkles, Star, Bookmark, X, Undo2, EyeOff, Check } from 'lucide-react';
 import { Job } from '../lib/types';
 import { Badge } from './ui/badge';
 import { TagPill } from './TagPill';
@@ -16,9 +16,10 @@ interface JobCardProps {
   onHide?: (job: Job) => void;
   isHidden?: boolean;
   onUndo?: () => void;
+  hasApplied?: boolean;
 }
 
-export function JobCard({ job, onApply, isSaved, onToggleSave, onHide, isHidden, onUndo }: JobCardProps) {
+export function JobCard({ job, onApply, isSaved, onToggleSave, onHide, isHidden, onUndo, hasApplied }: JobCardProps) {
   const navigate = useNavigate();
   const goToDetails = () => !isHidden && navigate(`/jobs/${job.id}`);
 
@@ -165,15 +166,18 @@ export function JobCard({ job, onApply, isSaved, onToggleSave, onHide, isHidden,
             </Link>
           </Button>
           <Button
-            variant="primary"
+            variant={hasApplied ? "outline" : "primary"}
             size="sm"
-            rightIcon={<Sparkles className="h-4 w-4" />}
+            disabled={hasApplied}
+            rightIcon={hasApplied ? <Check className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
             onClick={(event) => {
               event.stopPropagation();
-              onApply?.(job);
+              if (!hasApplied) {
+                onApply?.(job);
+              }
             }}
           >
-            Quick apply
+            {hasApplied ? 'Applied' : 'Quick apply'}
           </Button>
         </div>
       </div>
