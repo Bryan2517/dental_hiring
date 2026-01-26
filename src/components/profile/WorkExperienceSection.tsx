@@ -7,6 +7,7 @@ import { Modal } from '../ui/modal';
 import { Checkbox } from '../ui/checkbox';
 import { Trash2, Pencil, Plus } from 'lucide-react';
 import { formatDate } from '../../lib/utils';
+import { Toast } from '../ui/toast';
 
 interface WorkExperienceSectionProps {
     userId: string;
@@ -19,6 +20,7 @@ export default function WorkExperienceSection({ userId, initialData = [] }: Work
 
     // Modal State
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [deleteConfirmationId, setDeleteConfirmationId] = useState<string | null>(null);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [formData, setFormData] = useState<Partial<WorkExperience>>({
         companyName: '',
@@ -28,6 +30,13 @@ export default function WorkExperienceSection({ userId, initialData = [] }: Work
         endDate: '',
         isCurrent: false,
         description: ''
+    });
+
+    // Toast State
+    const [toast, setToast] = useState<{ open: boolean; title: string; variant: 'success' | 'error' | 'warning' | 'info' }>({
+        open: false,
+        title: '',
+        variant: 'success'
     });
 
     useEffect(() => {
@@ -60,6 +69,10 @@ export default function WorkExperienceSection({ userId, initialData = [] }: Work
         }
     }
 
+    const showToast = (title: string, variant: 'success' | 'error' | 'warning' = 'success') => {
+        setToast({ open: true, title, variant });
+    };
+
     const handleOpenAdd = () => {
         setEditingId(null);
         setFormData({
@@ -89,37 +102,50 @@ export default function WorkExperienceSection({ userId, initialData = [] }: Work
     };
 
     const handleSave = async () => {
-        if (!formData.companyName || !formData.jobTitle) return alert('Company Name and Job Title are required');
+        if (!formData.companyName || !formData.jobTitle) {
+            showToast('Company Name and Job Title are required', 'warning');
+            return;
+        }
 
         try {
             if (editingId && !editingId.startsWith('temp-')) {
                 await updateWorkExperience(editingId, formData);
+                showToast('Work experience updated successfully');
             } else {
                 await addWorkExperience(userId, formData as Omit<WorkExperience, 'id'>);
                 if (editingId && editingId.startsWith('temp-')) {
                     setExperienceList(prev => prev.filter(p => p.id !== editingId));
                 }
+                showToast('Work experience added successfully');
             }
             setIsModalOpen(false);
             fetchExperience();
         } catch (err) {
             console.error(err);
-            alert('Failed to save');
+            showToast('Failed to save experience', 'error');
         }
     };
 
-    const handleDelete = async (id: string) => {
-        if (!confirm('Are you sure?')) return;
+    const handleDelete = (id: string) => {
+        setDeleteConfirmationId(id);
+    };
+
+    const confirmDelete = async () => {
+        if (!deleteConfirmationId) return;
+
         try {
-            if (id.startsWith('temp-')) {
-                setExperienceList(prev => prev.filter(item => item.id !== id));
+            if (deleteConfirmationId.startsWith('temp-')) {
+                setExperienceList(prev => prev.filter(item => item.id !== deleteConfirmationId));
             } else {
-                await deleteWorkExperience(id);
+                await deleteWorkExperience(deleteConfirmationId);
                 fetchExperience();
             }
+            showToast('Work experience deleted successfully');
         } catch (err) {
             console.error(err);
-            alert('Failed to delete');
+            showToast('Failed to delete experience', 'error');
+        } finally {
+            setDeleteConfirmationId(null);
         }
     };
 
@@ -218,6 +244,28 @@ export default function WorkExperienceSection({ userId, initialData = [] }: Work
                     </div>
                 </div>
             </Modal>
+
+            <Modal
+                open={!!deleteConfirmationId}
+                onClose={() => setDeleteConfirmationId(null)}
+                title="Delete Experience"
+                maxWidth="max-w-md"
+            >
+                <div className="space-y-4">
+                    <p className="text-gray-600">Are you sure you want to delete this work experience entry? This action cannot be undone.</p>
+                    <div className="flex justify-end gap-2">
+                        <Button variant="ghost" onClick={() => setDeleteConfirmationId(null)}>Cancel</Button>
+                        <Button className='bg-red-600 hover:bg-red-700 text-white' onClick={confirmDelete}>Delete</Button>
+                    </div>
+                </div>
+            </Modal>
+
+            <Toast
+                open={toast.open}
+                onClose={() => setToast(prev => ({ ...prev, open: false }))}
+                title={toast.title}
+                variant={toast.variant}
+            />
         </div>
     );
 }

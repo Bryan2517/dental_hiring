@@ -4,13 +4,14 @@ import { getEducation, addEducation, updateEducation, deleteEducation } from '..
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Modal } from '../ui/modal';
-import { Checkbox } from '../ui/checkbox'; // Assuming Checkbox exists
+import { Checkbox } from '../ui/checkbox';
 import { Trash2, Pencil, Plus } from 'lucide-react';
-import { formatDate } from '../../lib/utils'; // Assuming this exists
+import { formatDate } from '../../lib/utils';
+import { Toast } from '../ui/toast';
 
 interface EducationSectionProps {
     userId: string;
-    initialData?: Education[]; // Allow passing initial data (e.g. from resume scan)
+    initialData?: Education[];
 }
 
 export default function EducationSection({ userId, initialData = [] }: EducationSectionProps) {
@@ -19,6 +20,7 @@ export default function EducationSection({ userId, initialData = [] }: Education
 
     // Modal State
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [deleteConfirmationId, setDeleteConfirmationId] = useState<string | null>(null);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [formData, setFormData] = useState<Partial<Education>>({
         institutionName: '',
@@ -30,6 +32,13 @@ export default function EducationSection({ userId, initialData = [] }: Education
         description: ''
     });
 
+    // Toast State
+    const [toast, setToast] = useState<{ open: boolean; title: string; variant: 'success' | 'error' | 'warning' | 'info' }>({
+        open: false,
+        title: '',
+        variant: 'success'
+    });
+
     useEffect(() => {
         fetchEducation();
     }, [userId]);
@@ -38,7 +47,6 @@ export default function EducationSection({ userId, initialData = [] }: Education
     useEffect(() => {
         if (initialData.length > 0) {
             setEducationList(prev => {
-                // Append items that don't already exist (simple duplicate check)
                 const newItems = initialData.filter(newItem =>
                     !prev.some(existing => existing.institutionName === newItem.institutionName && existing.degree === newItem.degree)
                 );
@@ -52,7 +60,6 @@ export default function EducationSection({ userId, initialData = [] }: Education
         try {
             const data = await getEducation(userId);
             setEducationList(prev => {
-                // Keep temp items (those starting with 'temp-') when refreshing DB data
                 const tempItems = prev.filter(item => item.id.startsWith('temp-'));
                 return [...data, ...tempItems];
             });
@@ -62,6 +69,10 @@ export default function EducationSection({ userId, initialData = [] }: Education
             setLoading(false);
         }
     }
+
+    const showToast = (title: string, variant: 'success' | 'error' | 'warning' = 'success') => {
+        setToast({ open: true, title, variant });
+    };
 
     const handleOpenAdd = () => {
         setEditingId(null);
@@ -92,42 +103,50 @@ export default function EducationSection({ userId, initialData = [] }: Education
     };
 
     const handleSave = async () => {
-        if (!formData.institutionName) return alert('Institution Name is required');
+        if (!formData.institutionName) {
+            showToast('Institution Name is required', 'warning');
+            return;
+        }
 
         try {
             if (editingId && !editingId.startsWith('temp-')) {
                 await updateEducation(editingId, formData);
+                showToast('Education updated successfully');
             } else {
-                // If it's a new item OR a temp item being saved for the first time
                 await addEducation(userId, formData as Omit<Education, 'id'>);
-
-                // If it was a temp item, we should remove it from the list here? 
-                // fetchEducation below will reload from DB. 
-                // We should remove the temp item from state so it doesn't duplicate with the new DB item.
                 if (editingId && editingId.startsWith('temp-')) {
                     setEducationList(prev => prev.filter(p => p.id !== editingId));
                 }
+                showToast('Education added successfully');
             }
             setIsModalOpen(false);
             fetchEducation();
         } catch (err) {
             console.error(err);
-            alert('Failed to save');
+            showToast('Failed to save education', 'error');
         }
     };
 
-    const handleDelete = async (id: string) => {
-        if (!confirm('Are you sure?')) return;
+    const handleDelete = (id: string) => {
+        setDeleteConfirmationId(id);
+    };
+
+    const confirmDelete = async () => {
+        if (!deleteConfirmationId) return;
+
         try {
-            if (id.startsWith('temp-')) {
-                setEducationList(prev => prev.filter(item => item.id !== id));
+            if (deleteConfirmationId.startsWith('temp-')) {
+                setEducationList(prev => prev.filter(item => item.id !== deleteConfirmationId));
             } else {
-                await deleteEducation(id);
+                await deleteEducation(deleteConfirmationId);
                 fetchEducation();
             }
+            showToast('Education deleted successfully');
         } catch (err) {
             console.error(err);
-            alert('Failed to delete');
+            showToast('Failed to delete education', 'error');
+        } finally {
+            setDeleteConfirmationId(null);
         }
     };
 
@@ -226,6 +245,28 @@ export default function EducationSection({ userId, initialData = [] }: Education
                     </div>
                 </div>
             </Modal>
+
+            <Modal
+                open={!!deleteConfirmationId}
+                onClose={() => setDeleteConfirmationId(null)}
+                title="Delete Education"
+                maxWidth="max-w-md"
+            >
+                <div className="space-y-4">
+                    <p className="text-gray-600">Are you sure you want to delete this education entry? This action cannot be undone.</p>
+                    <div className="flex justify-end gap-2">
+                        <Button variant="ghost" onClick={() => setDeleteConfirmationId(null)}>Cancel</Button>
+                        <Button className='bg-red-600 hover:bg-red-700 text-white' onClick={confirmDelete}>Delete</Button>
+                    </div>
+                </div>
+            </Modal>
+
+            <Toast
+                open={toast.open}
+                onClose={() => setToast(prev => ({ ...prev, open: false }))}
+                title={toast.title}
+                variant={toast.variant}
+            />
         </div>
     );
 }
