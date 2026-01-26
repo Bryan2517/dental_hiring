@@ -11,6 +11,7 @@ export interface ExtractedProfile {
 }
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { Education, WorkExperience } from "../types";
 
 export interface ExtractedProfile {
     fullName?: string;
@@ -22,6 +23,8 @@ export interface ExtractedProfile {
     skills?: string[];
     experienceYears?: number;
     school?: string;
+    education?: Omit<Education, 'id'>[];
+    workExperience?: Omit<WorkExperience, 'id'>[];
 }
 
 export async function parseResumeWithGemini(text: string, apiKey: string): Promise<ExtractedProfile> {
@@ -39,6 +42,22 @@ export async function parseResumeWithGemini(text: string, apiKey: string): Promi
     - skills (array of strings)
     - experienceYears (number: Total years of experience based on work history)
     - school (string: Name of the university or dental school attended)
+    - education (array of objects):
+      - institutionName (string)
+      - degree (string)
+      - fieldOfStudy (string)
+      - startDate (string: YYYY-MM-DD format or YYYY-MM)
+      - endDate (string: YYYY-MM-DD format, YYYY-MM, or null if current)
+      - isCurrent (boolean)
+      - description (string)
+    - workExperience (array of objects):
+      - companyName (string)
+      - jobTitle (string)
+      - location (string)
+      - startDate (string: YYYY-MM-DD format or YYYY-MM)
+      - endDate (string: YYYY-MM-DD format, YYYY-MM, or null if current)
+      - isCurrent (boolean)
+      - description (string: key responsibilities)
 
     Resume Text:
     ${text}

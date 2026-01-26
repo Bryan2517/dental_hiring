@@ -104,3 +104,25 @@ export interface Resume {
   url?: string;
   isDefault?: boolean;
 }
+
+export interface Education {
+  id: string;
+  institutionName: string;
+  degree?: string;
+  fieldOfStudy?: string;
+  startDate?: string;
+  endDate?: string;
+  isCurrent?: boolean;
+  description?: string;
+}
+
+export interface WorkExperience {
+  id: string;
+  companyName: string;
+  jobTitle: string;
+  location?: string;
+  startDate?: string;
+  endDate?: string;
+  isCurrent?: boolean;
+  description?: string;
+}

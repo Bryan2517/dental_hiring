@@ -35,3 +35,15 @@ export function currency(amount: number) {
     maximumFractionDigits: 0
   }).format(amount);
 }
+
+export function toPostgresDate(date?: string): string | null {
+  if (!date) return null;
+  if (/^\d{4}-\d{2}$/.test(date)) {
+    return `${date}-01`;
+  }
+  // If it's just a year YYYY
+  if (/^\d{4}$/.test(date)) {
+    return `${date}-01-01`;
+  }
+  return date;
+}

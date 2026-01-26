@@ -25,6 +25,11 @@ import { Database } from '../../lib/database.types';
 import { getApplications } from '../../lib/api/applications';
 import { extractTextFromPDF } from '../../lib/utils/pdf';
 import { parseResumeWithGemini } from '../../lib/services/resume';
+import EducationSection from '../../components/profile/EducationSection';
+import WorkExperienceSection from '../../components/profile/WorkExperienceSection';
+import { Education, WorkExperience } from '../../lib/types';
+import { addEducation } from '../../lib/api/education';
+import { addWorkExperience } from '../../lib/api/work_experience';
 
 const sidebarLinks = [
   { to: '/seekers/dashboard', label: 'Dashboard' },
@@ -64,6 +69,9 @@ export default function ProfileDashboard() {
   const [latestResume, setLatestResume] = useState<Resume | null>(null);
   const [profileFields, setProfileFields] = useState(defaultProfileFields);
   const [selectedExposures, setSelectedExposures] = useState<string[]>([]);
+  const [scannedEducation, setScannedEducation] = useState<Education[]>([]);
+  const [scannedExperience, setScannedExperience] = useState<WorkExperience[]>([]);
+  const [dataVersion, setDataVersion] = useState(0);
 
   // Modals & Upload
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -290,6 +298,39 @@ export default function ProfileDashboard() {
         seekerType: (extractedData.experienceYears || 0) > 2 ? 'professional' : 'student',
       }));
 
+      // Map Education and Save to DB
+      if (extractedData.education && extractedData.education.length > 0) {
+        for (const edu of extractedData.education) {
+          await addEducation(user.id, {
+            institutionName: edu.institutionName,
+            degree: edu.degree,
+            fieldOfStudy: edu.fieldOfStudy,
+            startDate: edu.startDate,
+            endDate: edu.endDate,
+            isCurrent: edu.isCurrent ?? false,
+            description: edu.description
+          });
+        }
+      }
+
+      // Map Work Experience and Save to DB
+      if (extractedData.workExperience && extractedData.workExperience.length > 0) {
+        for (const exp of extractedData.workExperience) {
+          await addWorkExperience(user.id, {
+            companyName: exp.companyName,
+            jobTitle: exp.jobTitle,
+            location: exp.location || '',
+            startDate: exp.startDate,
+            endDate: exp.endDate,
+            isCurrent: exp.isCurrent ?? false,
+            description: exp.description
+          });
+        }
+      }
+
+      // Force refresh of sections
+      setDataVersion(prev => prev + 1);
+
       // Add skills to clinical exposures if they match
       if (extractedData.skills && extractedData.skills.length > 0) {
         // Simple fuzzy match or direct match against our fixed list "exposures"
@@ -459,15 +500,9 @@ export default function ProfileDashboard() {
                   onClick={() => {
                     fileInputRef.current?.click();
                   }}
+                  icon={!isAnalyzing ? <ScanText className="h-4 w-4" /> : undefined}
                 >
-                  {isAnalyzing ? (
-                    <span>Analyzing...</span>
-                  ) : (
-                    <>
-                      <ScanText className="h-4 w-4" />
-                      <span>Auto-fill from Resume</span>
-                    </>
-                  )}
+                  {isAnalyzing ? 'Analyzing...' : 'Auto-fill from Resume'}
                 </Button>
               </div>
             </div>
@@ -554,6 +589,15 @@ export default function ProfileDashboard() {
                 ))}
               </div>
             </div>
+
+            <div className="md:col-span-2">
+              <EducationSection key={`edu-${dataVersion}`} userId={user!.id} />
+            </div>
+
+            <div className="md:col-span-2">
+              <WorkExperienceSection key={`exp-${dataVersion}`} userId={user!.id} />
+            </div>
+
             <div className="md:col-span-2 flex justify-end items-center gap-2">
               <Button variant="primary" onClick={handleSaveProfile} disabled={loading}>
                 {loading ? 'Saving...' : 'Save Profile'}

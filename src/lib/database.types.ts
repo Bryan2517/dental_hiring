@@ -71,6 +71,9 @@ export type Database = {
           content: string
           created_at: string
           read_at: string | null
+          attachment_url: string | null
+          attachment_name: string | null
+          attachment_size: number | null
         }
         Insert: {
           id?: string
@@ -79,6 +82,9 @@ export type Database = {
           content: string
           created_at?: string
           read_at?: string | null
+          attachment_url?: string | null
+          attachment_name?: string | null
+          attachment_size?: number | null
         }
         Update: {
           id?: string
@@ -87,6 +93,9 @@ export type Database = {
           content?: string
           created_at?: string
           read_at?: string | null
+          attachment_url?: string | null
+          attachment_name?: string | null
+          attachment_size?: number | null
         }
         Relationships: [
           {
