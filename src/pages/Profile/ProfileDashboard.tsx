@@ -651,8 +651,8 @@ export default function ProfileDashboard() {
                     <div className="flex flex-col gap-4">
                       <div className="flex items-start justify-between gap-4">
                         <div>
-                          <h4 className="font-bold text-gray-900 text-lg">{app.clinicName}</h4>
-                          <p className="text-gray-600 font-medium">{app.jobTitle}</p>
+                          <h4 className="font-bold text-gray-900 text-lg">{app.jobTitle}</h4>
+                          <p className="text-brand font-medium bg-brand/5 px-2 py-0.5 rounded-md w-fit">{app.clinicName}</p>
                           <p className="text-sm text-gray-500 mt-1">{app.location}</p>
                         </div>
                         <Badge variant={

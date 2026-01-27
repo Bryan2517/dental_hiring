@@ -8,10 +8,12 @@ import EmployerDashboard from './pages/Employer/EmployerDashboard';
 import PostJob from './pages/Employer/PostJob';
 import ApplicantsPipeline from './pages/Employer/ApplicantsPipeline';
 import AdminDashboard from './pages/Admin/AdminDashboard';
+import OrganizationsList from './pages/Admin/OrganizationsList';
 import About from './pages/Marketing/About';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AuthModal } from './components/AuthModal';
 import MessagesPage from './pages/Messages/MessagesPage';
+import PublicOrganizationProfile from './pages/Marketing/OrganizationProfile';
 
 import OrganizationProfile from './pages/Employer/OrganizationProfile';
 import OrganizationTeam from './pages/Employer/OrganizationTeam';
@@ -100,6 +102,16 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/admin/organizations"
+          element={
+            <ProtectedRoute requiredRole="admin">
+              <OrganizationsList />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route path="/organizations/:orgName" element={<PublicOrganizationProfile />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <AuthModal />

@@ -8,7 +8,7 @@ import { Textarea } from '../../components/ui/textarea';
 import { Select } from '../../components/ui/select';
 import { Toast } from '../../components/ui/toast';
 import { useAuth } from '../../contexts/AuthContext';
-import { getOrganization, updateOrganization, createOrganization, getUsersOrganizations, leaveOrganization } from '../../lib/api/organizations';
+import { getOrganization, updateOrganization, createOrganization, getUsersOrganizations, leaveOrganization, requestVerification } from '../../lib/api/organizations';
 import { Database } from '../../lib/database.types';
 import { Tabs } from '../../components/ui/tabs';
 import { supabase } from '../../lib/supabase';
@@ -23,7 +23,10 @@ const sidebarLinks = [
     { to: '/jobs', label: 'Job board' }
 ];
 
+import { Badge } from '../../components/ui/badge';
+
 type OrgType = Database['public']['Enums']['org_type'];
+type VerifiedStatus = Database['public']['Enums']['verified_status'];
 
 export default function OrganizationProfile() {
     const { user } = useAuth();
@@ -38,6 +41,7 @@ export default function OrganizationProfile() {
     // Form State
     const [orgName, setOrgName] = useState('');
     const [orgType, setOrgType] = useState<OrgType>('clinic');
+    const [verifiedStatus, setVerifiedStatus] = useState<VerifiedStatus>('unverified');
     const [description, setDescription] = useState('');
     const [websiteUrl, setWebsiteUrl] = useState('');
 
@@ -65,6 +69,7 @@ export default function OrganizationProfile() {
                     setOrgId(org.id);
                     setOrgName(org.org_name);
                     setOrgType(org.org_type);
+                    setVerifiedStatus(org.verified_status);
                     setDescription(org.description || '');
                     setWebsiteUrl(org.website_url || '');
                     setAddress1(org.address_line1 || '');
@@ -104,6 +109,23 @@ export default function OrganizationProfile() {
             }
             setLogoFile(file);
             setLogoPreview(URL.createObjectURL(file));
+        }
+    };
+
+    const handleRequestVerification = async () => {
+        if (!orgId) return;
+        try {
+            setSaving(true);
+            await requestVerification(orgId);
+            setVerifiedStatus('pending');
+            setToastMessage('Verification requested successfully');
+            setToastOpen(true);
+        } catch (error) {
+            console.error('Error requesting verification:', error);
+            setToastMessage('Failed to request verification');
+            setToastOpen(true);
+        } finally {
+            setSaving(false);
         }
     };
 
@@ -299,6 +321,28 @@ export default function OrganizationProfile() {
                                     placeholder="e.g. Happy Teeth Dental"
                                     disabled={!canEdit}
                                 />
+                                {orgId && (
+                                    <div className="flex items-center justify-between bg-gray-50 px-4 py-2 rounded-lg border border-gray-100 h-[42px] mt-6">
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-sm font-medium text-gray-700">Verification Status:</span>
+                                            {verifiedStatus === 'verified' && <Badge variant="success">Verified</Badge>}
+                                            {verifiedStatus === 'pending' && <Badge variant="warning">Pending Verification</Badge>}
+                                            {verifiedStatus === 'rejected' && <Badge variant="danger">Rejected</Badge>}
+                                            {verifiedStatus === 'unverified' && <Badge variant="outline">Unverified</Badge>}
+                                        </div>
+                                        {canEdit && (verifiedStatus === 'unverified' || verifiedStatus === 'rejected') && (
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={handleRequestVerification}
+                                                disabled={saving}
+                                            >
+                                                Request Verification
+                                            </Button>
+                                        )}
+                                    </div>
+                                )}
                                 <Select
                                     label="Organization Type"
                                     value={orgType}

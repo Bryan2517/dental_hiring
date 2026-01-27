@@ -1,12 +1,13 @@
 import { Link, useNavigate } from 'react-router-dom';
 import type { KeyboardEvent } from 'react';
-import { Building2, MapPin, Sparkles, Star, Bookmark, X, Undo2, EyeOff, Check } from 'lucide-react';
+import { Building2, MapPin, Sparkles, Star, Bookmark, X, Undo2, EyeOff, Check, Trash2 } from 'lucide-react';
 import { Job } from '../lib/types';
 import { Badge } from './ui/badge';
 import { TagPill } from './TagPill';
 import { Button } from './ui/button';
 import { timeAgo } from '../lib/utils';
 import { cn } from '../lib/utils';
+import { useAuth } from '../contexts/AuthContext';
 
 interface JobCardProps {
   job: Job;
@@ -17,10 +18,12 @@ interface JobCardProps {
   isHidden?: boolean;
   onUndo?: () => void;
   hasApplied?: boolean;
+  onDelete?: (job: Job) => void;
 }
 
-export function JobCard({ job, onApply, isSaved, onToggleSave, onHide, isHidden, onUndo, hasApplied }: JobCardProps) {
+export function JobCard({ job, onApply, isSaved, onToggleSave, onHide, isHidden, onUndo, hasApplied, onDelete }: JobCardProps) {
   const navigate = useNavigate();
+  const { userRole } = useAuth();
   const goToDetails = () => !isHidden && navigate(`/jobs/${job.id}`);
 
   if (isHidden) {
@@ -65,39 +68,49 @@ export function JobCard({ job, onApply, isSaved, onToggleSave, onHide, isHidden,
       role="button"
       tabIndex={0}
     >
-      {onToggleSave && (
-        <div className="absolute top-6 right-16 z-10">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleSave(job);
-            }}
-            className={cn(
-              "rounded-full p-2 transition-colors hover:bg-gray-100",
-              isSaved ? "text-brand" : "text-gray-400 hover:text-gray-600"
-            )}
-          >
-            <Bookmark className={cn("h-5 w-5", isSaved && "fill-current")} />
-          </button>
-        </div>
-      )}
-
-      {onHide && (
-        <div className="absolute top-6 right-6 z-10">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onHide(job);
-            }}
-            title="Hide this job"
-            className="rounded-full p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-      )}
+      {/* Action buttons moved to float-right section */}
 
       <div className="float-right ml-4 mb-2 flex flex-col items-end gap-2 text-right">
+        <div className="flex items-center gap-1">
+          {onToggleSave && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleSave(job);
+              }}
+              className={cn(
+                "rounded-full p-2 transition-colors hover:bg-gray-100",
+                isSaved ? "text-brand" : "text-gray-400 hover:text-gray-600"
+              )}
+            >
+              <Bookmark className={cn("h-5 w-5", isSaved && "fill-current")} />
+            </button>
+          )}
+
+          {userRole === 'admin' && onDelete ? (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(job);
+              }}
+              title="Delete this job"
+              className="rounded-full p-2 text-red-400 transition-colors hover:bg-red-50 hover:text-red-600"
+            >
+              <Trash2 className="h-5 w-5" />
+            </button>
+          ) : onHide && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onHide(job);
+              }}
+              title="Hide this job"
+              className="rounded-full p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          )}
+        </div>
         {job.logoUrl && (
           <div className="mb-4 h-24 w-24 overflow-hidden rounded-lg border border-gray-100 bg-white shadow-sm flex items-center justify-center">
             <img
@@ -120,24 +133,33 @@ export function JobCard({ job, onApply, isSaved, onToggleSave, onHide, isHidden,
       </div>
 
       <div className="space-y-1 mb-4">
-        <p className="inline-flex items-center gap-2 rounded-full bg-brand/10 px-3 py-1 text-sm font-semibold text-brand">
-          {job.roleType}
-          <span className="text-gray-500">- {timeAgo(job.postedAt)}</span>
-        </p>
-        <h3 className="text-2xl font-bold text-gray-900">{job.clinicName}</h3>
-        <div className="flex flex-wrap items-center gap-3 text-base text-gray-600">
-          <span className="inline-flex items-center gap-1">
-            <Building2 className="h-4 w-4 text-brand" />
-            {job.employmentType}
-          </span>
-          <span className="inline-flex items-center gap-1">
-            <MapPin className="h-4 w-4 text-brand" />
-            {job.city}, {job.country}
-          </span>
-          <span className="inline-flex items-center gap-1 text-amber-700">
-            <Star className="h-4 w-4" />
-            {job.experienceLevel}
-          </span>
+        <h3 className="text-2xl font-bold text-gray-900">{job.roleType}</h3>
+        <div className="flex flex-col gap-1">
+          <Link
+            to={`/organizations/${encodeURIComponent(job.clinicName)}`}
+            onClick={(e) => e.stopPropagation()}
+            className="text-lg font-medium text-brand bg-brand/5 px-2 py-0.5 rounded-md w-fit hover:bg-brand/10 transition-colors"
+          >
+            {job.clinicName}
+          </Link>
+          <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500">
+            <span>{timeAgo(job.postedAt)}</span>
+            <span className="h-1 w-1 rounded-full bg-gray-300"></span>
+            <span className="inline-flex items-center gap-1">
+              <Building2 className="h-3.5 w-3.5" />
+              {job.employmentType}
+            </span>
+            <span className="h-1 w-1 rounded-full bg-gray-300"></span>
+            <span className="inline-flex items-center gap-1">
+              <MapPin className="h-3.5 w-3.5" />
+              {job.city}, {job.country}
+            </span>
+            <span className="h-1 w-1 rounded-full bg-gray-300"></span>
+            <span className="inline-flex items-center gap-1 text-amber-700">
+              <Star className="h-3.5 w-3.5" />
+              {job.experienceLevel}
+            </span>
+          </div>
         </div>
       </div>
 

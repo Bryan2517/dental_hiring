@@ -21,6 +21,8 @@ export function TopNav() {
     if (path.startsWith('/employer') || path.startsWith('/employers')) return 'employer';
     // If on a shared route like /messages, fallback to the user's actual role
     if (path.startsWith('/messages') && userRole) return userRole as Role;
+    if (path.startsWith('/organizations') && userRole === 'admin') return 'admin';
+    if (path.startsWith('/jobs') && userRole === 'admin') return 'admin';
     return 'seeker';
   }, [location.pathname, userRole]);
 
@@ -36,7 +38,12 @@ export function TopNav() {
       ];
     }
     if (activeRole === 'admin') {
-      return [{ to: '/admin', label: 'Admin Console' }];
+      return [
+        { to: '/admin', label: 'Overview', icon: <LayoutDashboard className="h-4 w-4" />, end: true },
+        { to: '/jobs', label: 'Job Board', icon: <Briefcase className="h-4 w-4" /> },
+        // Keeping the link as requested, though it might need adjustment if /employer/dashboard is employer-only
+        { to: '/admin/organizations', label: 'Organizations', icon: <Building2Icon className="h-4 w-4" /> }
+      ];
     }
     return [
       { to: '/seekers', label: 'Seekers Home', icon: <User2 className="h-4 w-4" />, end: true },

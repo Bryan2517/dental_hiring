@@ -6,7 +6,7 @@ import { JobFilters, JobFilterState } from '../../components/JobFilters';
 import { Pagination } from '../../components/Pagination';
 import { ApplyModal } from '../../components/ApplyModal';
 import { Breadcrumbs } from '../../components/Breadcrumbs';
-import { getJobs, saveJob, unsaveJob, getSavedJobs, hideJob, unhideJob, getHiddenJobIds } from '../../lib/api/jobs';
+import { getJobs, saveJob, unsaveJob, getSavedJobs, hideJob, unhideJob, getHiddenJobIds, deleteJob } from '../../lib/api/jobs';
 import { getUserDocuments } from '../../lib/api/profiles';
 import { getApplications } from '../../lib/api/applications';
 import { useAuth } from '../../contexts/AuthContext';
@@ -147,6 +147,21 @@ export default function JobsList() {
     }
   };
 
+  const handleDeleteJob = async (job: Job) => {
+    if (!window.confirm("Are you sure you want to delete this job? This action cannot be undone.")) return;
+
+    try {
+      await deleteJob(job.id);
+      setJobs(prevJobs => prevJobs.filter(j => j.id !== job.id));
+      setToastMessage('Job deleted successfully');
+      setToastOpen(true);
+    } catch (error) {
+      console.error('Error deleting job:', error);
+      setToastMessage('Failed to delete job');
+      setToastOpen(true);
+    }
+  };
+
   useEffect(() => {
     async function loadData() {
       try {
@@ -263,6 +278,7 @@ export default function JobsList() {
                   isHidden={hiddenJobIds.has(job.id)}
                   onUndo={() => handleUndoHide(job)}
                   hasApplied={appliedJobIds.has(job.id)}
+                  onDelete={handleDeleteJob}
                 />
               ))}
               {pageJobs.length === 0 && (

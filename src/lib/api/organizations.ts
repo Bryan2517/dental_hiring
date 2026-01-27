@@ -94,3 +94,41 @@ export async function leaveOrganization(userId: string, orgId: string) {
 
     if (deleteError) throw deleteError;
 }
+
+export async function requestVerification(orgId: string) {
+    const { error } = await supabase
+        .from('organizations')
+        .update({ verified_status: 'pending' })
+        .eq('id', orgId);
+
+    if (error) throw error;
+}
+
+export async function getPendingOrganizations() {
+    const { data, error } = await supabase
+        .from('organizations')
+        .select('*')
+        .eq('verified_status', 'pending');
+
+    if (error) throw error;
+    return data;
+}
+
+export async function getAllOrganizations() {
+    const { data, error } = await supabase
+        .from('organizations')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data;
+}
+
+export async function updateVerificationStatus(orgId: string, status: 'verified' | 'rejected') {
+    const { error } = await supabase
+        .from('organizations')
+        .update({ verified_status: status })
+        .eq('id', orgId);
+
+    if (error) throw error;
+}

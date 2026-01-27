@@ -161,8 +161,13 @@ export default function JobDetails() {
           <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-card">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <p className="text-sm font-semibold text-brand">{job.roleType}</p>
-                <h1 className="text-3xl font-bold text-gray-900">{job.clinicName}</h1>
+                <h1 className="text-3xl font-bold text-gray-900">{job.roleType}</h1>
+                <Link
+                  to={`/organizations/${encodeURIComponent(job.clinicName)}`}
+                  className="mt-2 text-lg font-medium text-brand bg-brand/5 px-2 py-0.5 rounded-md w-fit hover:bg-brand/10 transition-colors block"
+                >
+                  {job.clinicName}
+                </Link>
                 <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-gray-700">
                   <span className="inline-flex items-center gap-1">
                     <Building2 className="h-4 w-4 text-brand" />

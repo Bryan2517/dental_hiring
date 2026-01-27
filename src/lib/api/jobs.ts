@@ -73,6 +73,7 @@ export async function getJobs(filters?: {
   newGrad?: boolean;
   training?: boolean;
   internship?: boolean;
+  orgId?: string;
   page?: number;
   limit?: number;
 }): Promise<{ data: Job[]; count: number }> {
@@ -126,6 +127,10 @@ export async function getJobs(filters?: {
 
   if (filters?.internship) {
     query = query.eq('internship_available', true);
+  }
+
+  if (filters?.orgId) {
+    query = query.eq('org_id', filters.orgId);
   }
 
   if (filters?.employmentType && filters.employmentType !== '') {
@@ -360,4 +365,16 @@ export async function getHiddenJobIds(userId: string): Promise<string[]> {
   }
 
   return data.map((item: any) => item.job_id);
+}
+
+export async function deleteJob(jobId: string): Promise<void> {
+  const { error } = await supabase
+    .from('jobs')
+    .delete()
+    .eq('id', jobId);
+
+  if (error) {
+    console.error('Error deleting job:', error);
+    throw error;
+  }
 }

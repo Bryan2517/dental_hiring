@@ -50,6 +50,11 @@ export function AuthModal() {
   };
 
   const goToDefault = (userRole: string | null) => {
+    if (userRole === 'admin') {
+      navigate('/admin');
+      closeAuthModal();
+      return;
+    }
     const fallback = userRole === 'employer' ? '/employers' : '/seekers';
     const redirectPath = authModalRedirectPath ?? fallback;
     navigate(redirectPath);

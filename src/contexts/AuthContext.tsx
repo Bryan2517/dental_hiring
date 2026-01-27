@@ -50,13 +50,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       try {
         if (sessionData?.user) {
-          const metadataRole = sessionData.user.user_metadata?.role as UserRole | undefined;
-          if (metadataRole) {
-            setUserRole(metadataRole);
+          // Hardcoded Admin Access
+          if (sessionData.user.email === 'admin@mrbur.com') {
+            setUserRole('admin');
           } else {
-            const loadedRole = await loadUserRole(sessionData.user.id);
-            if (isMounted) {
-              setUserRole(loadedRole);
+            const metadataRole = sessionData.user.user_metadata?.role as UserRole | undefined;
+            if (metadataRole) {
+              // Prevent others from being admin via metadata
+              setUserRole(metadataRole === 'admin' ? 'employer' : metadataRole);
+            } else {
+              const loadedRole = await loadUserRole(sessionData.user.id);
+              if (isMounted) {
+                // loadUserRole internal logic should also handle it, but double check
+                setUserRole(loadedRole === 'admin' ? 'employer' : loadedRole);
+              }
             }
           }
         } else {
@@ -112,12 +119,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('user_id', userId)
         .maybeSingle();
 
+      const { data: userData } = await supabase.auth.getUser();
+      if (userData.user?.id === userId && userData.user?.email === 'admin@mrbur.com') {
+        return 'admin';
+      }
+
       if (error) {
         console.error('Error loading user role:', error);
         return null;
       }
 
-      return data?.role ?? null;
+      const role = data?.role ?? null;
+      // Double auth check: if DB says admin but not the right email, return null/employer
+      if (role === 'admin') {
+        // We can't easily check email again here without fetching user if not fetched above
+        // But we did fetch user above for the happy path. 
+        // If we are here, it means email is NOT admin@mrbur.com
+        return 'employer';
+      }
+
+      return role;
     } catch (error) {
       console.error('Error loading user role:', error);
       return null;
@@ -132,6 +153,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     metadata?: Record<string, any>
   ) {
     try {
+      // 1. Block Admin Registration via public form
+      if (role === 'admin' || email === 'admin@mrbur.com') {
+        // Security: Refuse to create admin via this path
+        return { error: { message: 'Admin account creation is restricted.' } as AuthError, role };
+      }
+
       const authMetadata = {
         ...(metadata ?? {}),
         role,
@@ -211,6 +238,59 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function signIn(email: string, password: string) {
+    // 1. Hardcoded Admin Credential Check & Auto-provisioning
+    if (email === 'admin@mrbur.com' && password === '123456') {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        // If login fails (likely doesn't exist), try to create it
+        console.log("Admin account not found/login failed, attempting auto-provisioning...");
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              full_name: 'System Admin',
+              role: 'admin'
+            }
+          }
+        });
+
+        if (signUpError) {
+          // If error is because user already exists, it means password was wrong earlier
+          if (signUpError.message && (signUpError.message.includes('registered') || signUpError.message.includes('exists'))) {
+            return {
+              error: { ...signUpError, message: 'Invalid Admin Credentials (account exists)' } as AuthError,
+              role: null
+            };
+          }
+          return { error: signUpError, role: null };
+        }
+
+        // If signup success, we might need to wait or it might be auto-confirmed (depending on Supabase settings).
+        // If 'Email Confirmations' are on, this might stall. Assuming they are off or we can't bypass.
+        // However, local dev usually has confirmations off or we handle it. 
+        // Let's try to sign in again or use the session from signup if returned.
+
+        if (signUpData.session) {
+          // Determine role
+          setUserRole('admin');
+          return { error: null, role: 'admin' as UserRole };
+        } else {
+          // Started signup but no session (maybe verify email?)
+          return { error: null, role: 'admin' as UserRole }; // Optimistic, or handle email verify
+        }
+      }
+
+      // Login success
+      setUserRole('admin');
+      return { error: null, role: 'admin' as UserRole };
+    }
+
+    // Normal User Login
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -218,7 +298,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     let role: UserRole | null = null;
     if (data.user) {
-      role = await loadUserRole(data.user.id);
+      if (data.user.email === 'admin@mrbur.com') {
+        role = 'admin';
+      } else {
+        role = await loadUserRole(data.user.id);
+        // Safety downgrade
+        if (role === 'admin') role = 'employer';
+      }
       setUserRole(role);
     }
 
