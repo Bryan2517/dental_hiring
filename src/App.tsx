@@ -14,6 +14,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { AuthModal } from './components/AuthModal';
 import MessagesPage from './pages/Messages/MessagesPage';
 import PublicOrganizationProfile from './pages/Marketing/OrganizationProfile';
+import SeekerPublicProfile from './pages/Marketing/SeekerPublicProfile';
 
 import OrganizationProfile from './pages/Employer/OrganizationProfile';
 import OrganizationTeam from './pages/Employer/OrganizationTeam';
@@ -112,6 +113,7 @@ function App() {
         />
 
         <Route path="/organizations/:orgName" element={<PublicOrganizationProfile />} />
+        <Route path="/seekers/:id" element={<SeekerPublicProfile />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <AuthModal />

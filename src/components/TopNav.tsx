@@ -140,7 +140,7 @@ export function TopNav() {
                   if (activeRole === 'employer') {
                     navigate('/employer/profile');
                   } else if (activeRole === 'seeker') {
-                    navigate('/seekers/dashboard');
+                    navigate(`/seekers/${user.id}`);
                   }
                 }}
                 title="Your Profile"

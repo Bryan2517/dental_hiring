@@ -17,7 +17,7 @@ import { JobStage, Resume } from '../../lib/types';
 import { formatDate } from '../../lib/utils';
 import { getSavedJobs, unsaveJob } from '../../lib/api/jobs';
 import { Breadcrumbs } from '../../components/Breadcrumbs';
-import { UploadCloud, ScanText, MessageCircle } from 'lucide-react';
+import { UploadCloud, ScanText, MessageCircle, Camera } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useChat } from '../../contexts/ChatContext';
 import { supabase } from '../../lib/supabase';
@@ -30,6 +30,7 @@ import WorkExperienceSection from '../../components/profile/WorkExperienceSectio
 import { Education, WorkExperience } from '../../lib/types';
 import { addEducation } from '../../lib/api/education';
 import { addWorkExperience } from '../../lib/api/work_experience';
+import { Avatar, AvatarFallback, AvatarImage } from '../../components/ui/avatar';
 
 const sidebarLinks = [
   { to: '/seekers/dashboard', label: 'Dashboard' },
@@ -46,6 +47,7 @@ const defaultProfileFields = {
   school: '',
   graduation: '',
   seekerType: 'student',
+  avatarUrl: '', // Add this
 };
 
 import { Modal } from '../../components/ui/modal';
@@ -90,6 +92,71 @@ export default function ProfileDashboard() {
   const [showToast, setShowToast] = useState(false);
   const [toastContent, setToastContent] = useState({ title: '', description: '' });
 
+  // Avatar Upload State
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      if (!event.target.files || event.target.files.length === 0) {
+        return;
+      }
+      const file = event.target.files[0];
+      setAvatarUploading(true);
+
+      const fileExt = file.name.split('.').pop();
+      const filePath = `${user?.id}-${Math.random()}.${fileExt}`;
+
+      // Upload image to Storage
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      // Get Public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      // Update Profile
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: publicUrl })
+        .eq('id', user?.id);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      setToastContent({
+        title: 'Success',
+        description: 'Profile picture updated successfully'
+      });
+      setShowToast(true);
+
+      // Update local state by forcing a reload or manually updating a profile context if it existed separately
+      // For now, reloading data or relying on AuthContext to refresh would be ideal, 
+      // but since AuthContext user object might not deep refresh immediately for custom fields,
+      // we might need to trigger a re-fetch or just let the user see it on refresh.
+      // Ideally, updateFields or similar.
+      // We will trigger a reload of profile data if possible, but simplest is just:
+      window.location.reload();
+
+    } catch (error: any) {
+      console.error('Error uploading avatar:', error);
+      setToastContent({
+        title: 'Error',
+        description: error.message || 'Failed to upload profile picture'
+      });
+      setShowToast(true);
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
   // Applications & Saved Jobs (We'll keep these mostly empty/basic for now unless we have real data populated)
   const [applications, setApplications] = useState<any[]>([]);
   const [savedJobs, setSavedJobs] = useState<any[]>([]);
@@ -111,20 +178,17 @@ export default function ProfileDashboard() {
           console.error('Error fetching profile:', profileError);
         } else if (profileData) {
           // Cast to any to safely handle the joined data structure
-          const data = profileData as any;
-          const seeker = data.seeker_profiles?.[0] || data.seeker_profiles || {};
-
-          // Safe check for array vs object
-          const seekerDetails = Array.isArray(seeker) ? seeker[0] : seeker;
+          const seekerData = Array.isArray(profileData.seeker_profiles) ? profileData.seeker_profiles[0] : profileData.seeker_profiles;
 
           setProfileFields({
-            fullName: data.full_name || '',
-            email: user!.email || '', // auth email is reliable source
-            school: seekerDetails?.school_name || '',
-            graduation: seekerDetails?.expected_graduation_date ? seekerDetails.expected_graduation_date.substring(0, 7) : '',
-            seekerType: seekerDetails?.seeker_type || 'student',
+            fullName: profileData.full_name || '',
+            email: user.email || '', // Email from auth user, not profile table usually (unless stored there too)
+            school: seekerData?.school_name || '',
+            graduation: seekerData?.expected_graduation_date || '',
+            seekerType: seekerData?.seeker_type || 'student',
+            avatarUrl: profileData.avatar_url || '', // Add this
           });
-          setSelectedExposures(seekerDetails?.clinical_exposures || []);
+          setSelectedExposures(seekerData?.clinical_exposures || []);
         }
 
         // 2. Fetch Resumes (seeker_documents)
@@ -465,6 +529,56 @@ export default function ProfileDashboard() {
 
       {activeTab === 'profile' && (
         <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm space-y-6">
+
+          {/* Avatar Upload Section */}
+          <div className="flex flex-col items-center justify-center p-6 border-b border-gray-100">
+            <div className="relative group">
+              <Avatar className="h-24 w-24 border-4 border-white shadow-md">
+                {/* We don't have the profile avatar_url directly in local state 'profileFields' usually, 
+                     but we can get it from 'user' or fetch it. 
+                     Let's verify where 'profileFields' comes from or if we need 'profile' state.
+                     Looking at existing code, 'profileFields' seems to be local state for edits.
+                     We should use the fetched profile data for the avatar src.
+                     However, 'fetchData' populates 'profileFields' but maybe not avatar.
+                     Let's check 'fetchData' implementation in a moment. 
+                     Safe bet: use user?.user_metadata?.avatar_url or fetch it. 
+                     Wait, 'getProfile' usually returns it.
+                     For now, I'll assume we can get it from a new 'profile' state or similar if I add it,
+                     OR I can pull it from 'user' if AuthContext keeps it updated (it might not).
+                     Let's look at lines 47-49 of ProfileDashboard.tsx again. 
+                     'defaultProfileFields' doesn't have avatar.
+                     I'll add 'avatarUrl' to 'profileFields' or a separate state variable.
+                  */}
+                <AvatarImage
+                  src={profileFields.avatarUrl || ''}
+                  alt="Profile"
+                  className="object-cover"
+                />
+                <AvatarFallback className="text-xl bg-gray-100 text-gray-600 font-bold">
+                  {profileFields.fullName ? profileFields.fullName.charAt(0).toUpperCase() : '?'}
+                </AvatarFallback>
+              </Avatar>
+
+              <div
+                className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-white"
+                onClick={() => avatarInputRef.current?.click()}
+              >
+                <Camera className="h-8 w-8" />
+              </div>
+
+              <input
+                type="file"
+                ref={avatarInputRef}
+                className="hidden"
+                accept="image/*"
+                onChange={handleAvatarUpload}
+                disabled={avatarUploading}
+              />
+            </div>
+            {avatarUploading && <p className="text-xs text-gray-500 mt-2">Uploading...</p>}
+            <p className="text-sm text-gray-500 mt-2">Click to change profile picture</p>
+          </div>
+
           <div className="rounded-2xl border border-dashed border-black bg-white p-4 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
