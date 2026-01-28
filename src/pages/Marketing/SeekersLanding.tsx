@@ -10,6 +10,7 @@ import { ApplyModal } from '../../components/ApplyModal';
 import { useState, useEffect } from 'react';
 import { Job } from '../../lib/types';
 import { getJobs } from '../../lib/api/jobs';
+import { getApplications } from '../../lib/api/applications';
 import { supabase } from '../../lib/supabase';
 import { TrendingUp, Building2, MapPin, Users } from 'lucide-react';
 import { getSavedJobs, saveJob, unsaveJob, hideJob, unhideJob, getHiddenJobIds } from '../../lib/api/jobs';
@@ -51,6 +52,7 @@ export default function SeekersLanding() {
   const [savedJobIds, setSavedJobIds] = useState<Set<string>>(new Set());
   const [hiddenJobIds, setHiddenJobIds] = useState<Set<string>>(new Set());
   const [undoableJobIds, setUndoableJobIds] = useState<Set<string>>(new Set());
+  const [appliedJobIds, setAppliedJobIds] = useState<Set<string>>(new Set());
   const [toastOpen, setToastOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
 
@@ -152,18 +154,21 @@ export default function SeekersLanding() {
     async function loadSavedJobsData() {
       if (user && userRole === 'seeker') {
         try {
-          const [saved, hidden] = await Promise.all([
+          const [saved, hidden, applications] = await Promise.all([
             getSavedJobs(user.id),
-            getHiddenJobIds(user.id)
+            getHiddenJobIds(user.id),
+            getApplications({ seeker_user_id: user.id })
           ]);
           setSavedJobIds(new Set(saved.map(j => j.id)));
           setHiddenJobIds(new Set(hidden));
+          setAppliedJobIds(new Set(applications.map(a => a.jobId)));
         } catch (error) {
           console.error('Error loading user job data:', error);
         }
       } else {
         setSavedJobIds(new Set());
         setHiddenJobIds(new Set());
+        setAppliedJobIds(new Set());
       }
     }
     loadSavedJobsData();
@@ -309,6 +314,7 @@ export default function SeekersLanding() {
                 onHide={handleHideJob}
                 isHidden={hiddenJobIds.has(job.id)}
                 onUndo={() => handleUndoHide(job)}
+                hasApplied={appliedJobIds.has(job.id)}
               />
             ))
           )}
