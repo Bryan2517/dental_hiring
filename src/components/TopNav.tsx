@@ -1,4 +1,4 @@
-import { ReactNode, useMemo, useState } from 'react';
+import { ReactNode, useMemo, useState, useEffect } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Briefcase, Building2Icon, LayoutDashboard, User2, UserRoundSearch, Wallet, LogIn, LogOut } from 'lucide-react';
 import { cn } from '../lib/utils';
@@ -7,6 +7,7 @@ import { Button } from './ui/button';
 import { Modal } from './ui/modal';
 import { Toast } from './ui/toast';
 import { useAuth } from '../contexts/AuthContext';
+import { getUsersOrganizations } from '../lib/api/organizations';
 
 export function TopNav() {
   const { userRole, signOut, user, openAuthModal } = useAuth();
@@ -14,6 +15,7 @@ export function TopNav() {
   const navigate = useNavigate();
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
   const [showSignOutToast, setShowSignOutToast] = useState(false);
+  const [employerOrgName, setEmployerOrgName] = useState<string | null>(null);
 
   const activeRole = useMemo<Role>(() => {
     const path = location.pathname;
@@ -22,9 +24,29 @@ export function TopNav() {
     // If on a shared route like /messages, fallback to the user's actual role
     if (path.startsWith('/messages') && userRole) return userRole as Role;
     if (path.startsWith('/organizations') && userRole === 'admin') return 'admin';
+    if (path.startsWith('/organizations') && userRole === 'employer') return 'employer';
     if (path.startsWith('/jobs') && userRole === 'admin') return 'admin';
     return 'seeker';
   }, [location.pathname, userRole]);
+
+  useEffect(() => {
+    async function fetchOrgName() {
+      if (activeRole === 'employer' && user?.id) {
+        try {
+          const orgs = await getUsersOrganizations(user.id);
+          // Currently assuming single org per user or taking the first one
+          if (orgs && orgs.length > 0) {
+            setEmployerOrgName(orgs[0].org_name);
+          } else {
+            setEmployerOrgName(null);
+          }
+        } catch (error) {
+          console.error("Error fetching user organization for nav:", error);
+        }
+      }
+    }
+    fetchOrgName();
+  }, [activeRole, user?.id]);
 
   const navLinks = useMemo(() => {
     if (activeRole === 'employer') {
@@ -33,7 +55,11 @@ export function TopNav() {
         { to: '/employer/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="h-4 w-4" /> },
         { to: '/employer/post-job', label: 'Post Job', icon: <Briefcase className="h-4 w-4" /> },
         { to: '/employer/applicants', label: 'Applicants', icon: <User2 className="h-4 w-4" /> },
-        { to: '/employer/organization', label: 'Organization', icon: <Building2Icon className="h-4 w-4" /> },
+        {
+          to: employerOrgName ? `/organizations/${encodeURIComponent(employerOrgName)}` : '/employer/organization',
+          label: 'Organization',
+          icon: <Building2Icon className="h-4 w-4" />
+        },
         // { to: '/employer/dashboard#wallet', label: 'Wallet', icon: <Wallet className="h-4 w-4" /> }
       ];
     }
@@ -50,7 +76,7 @@ export function TopNav() {
       { to: '/jobs', label: 'Jobs', icon: <Briefcase className="h-4 w-4" /> },
       { to: '/seekers/dashboard', label: 'Seekers Dashboard', icon: <LayoutDashboard className="h-4 w-4" /> }
     ];
-  }, [activeRole]);
+  }, [activeRole, employerOrgName]);
 
   const handleSignOutClick = () => {
     setShowSignOutConfirm(true);

@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { AppShell } from '../../layouts/AppShell';
-import { Building2, MapPin, Globe, CheckCircle2 } from 'lucide-react';
+import { Building2, MapPin, Globe, CheckCircle2, Edit } from 'lucide-react';
 import { getOrganizationByName } from '../../lib/api/public_organizations';
 import { getJobs, deleteJob } from '../../lib/api/jobs';
+import { getApplications } from '../../lib/api/applications';
 import { Job } from '../../lib/types';
 import { JobCard } from '../../components/JobCard';
 import { Button } from '../../components/ui/button';
@@ -14,11 +15,13 @@ import { Toast } from '../../components/ui/toast';
 
 export default function OrganizationProfile() {
     const { orgName } = useParams<{ orgName: string }>();
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<'jobs' | 'about'>('jobs');
     const [organization, setOrganization] = useState<any | null>(null);
     const [jobs, setJobs] = useState<Job[]>([]);
     const [loading, setLoading] = useState(true);
-    const { userRole } = useAuth();
+    const { userRole, user } = useAuth();
+    const [appliedJobIds, setAppliedJobIds] = useState<Set<string>>(new Set());
     const [toast, setToast] = useState<{ open: boolean; title: string; variant: 'success' | 'error' }>({
         open: false,
         title: '',
@@ -84,6 +87,15 @@ export default function OrganizationProfile() {
                         limit: 50
                     });
                     setJobs(orgJobs);
+
+                    // Fetch applications if user is a seeker
+                    if (user && userRole === 'seeker') {
+                        const applications = await getApplications({
+                            seeker_user_id: user.id
+                        });
+                        const appliedIds = new Set(applications.map(app => app.jobId));
+                        setAppliedJobIds(appliedIds);
+                    }
                 }
             } catch (error) {
                 console.error('Error loading organization profile:', error);
@@ -92,7 +104,7 @@ export default function OrganizationProfile() {
             }
         }
         loadData();
-    }, [orgName]);
+    }, [orgName, user, userRole]);
 
     if (loading) {
         return (
@@ -172,6 +184,17 @@ export default function OrganizationProfile() {
                                 </div>
                             </div>
                             <div className="flex gap-2 flex-col items-end">
+                                {userRole === 'employer' && (
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => navigate('/employer/organization')}
+                                        className="mb-2"
+                                        icon={<Edit className="h-4 w-4" />}
+                                    >
+                                        Edit Profile
+                                    </Button>
+                                )}
                                 {userRole === 'admin' && organization.verified_status === 'pending' && (
                                     <div className="flex gap-2 mb-2 p-2 bg-yellow-50 rounded-lg border border-yellow-100">
                                         <Button
@@ -222,7 +245,13 @@ export default function OrganizationProfile() {
                                 </div>
                             ) : (
                                 jobs.map(job => (
-                                    <JobCard key={job.id} job={job} onDelete={handleDeleteJob} />
+                                    <JobCard
+                                        key={job.id}
+                                        job={job}
+                                        onDelete={handleDeleteJob}
+                                        hasApplied={appliedJobIds.has(job.id)}
+                                        onApply={() => navigate(`/jobs/${job.id}`)}
+                                    />
                                 ))
                             )}
                         </div>
