@@ -124,7 +124,7 @@ export async function getAllOrganizations() {
     return data;
 }
 
-export async function updateVerificationStatus(orgId: string, status: 'verified' | 'rejected') {
+export async function updateVerificationStatus(orgId: string, status: 'verified' | 'rejected' | 'pending') {
     const { error } = await supabase
         .from('organizations')
         .update({ verified_status: status })

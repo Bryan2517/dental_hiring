@@ -28,7 +28,7 @@ export default function OrganizationProfile() {
         variant: 'success'
     });
 
-    const handleVerification = async (status: 'verified' | 'rejected') => {
+    const handleVerification = async (status: 'verified' | 'rejected' | 'pending') => {
         if (!organization) return;
         try {
             await updateVerificationStatus(organization.id, status);
@@ -211,6 +211,18 @@ export default function OrganizationProfile() {
                                             onClick={() => handleVerification('rejected')}
                                         >
                                             Reject
+                                        </Button>
+                                    </div>
+                                )}
+                                {userRole === 'admin' && organization.verified_status === 'verified' && (
+                                    <div className="flex gap-2 mb-2 p-2 rounded-lg border border-green-100">
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="text-amber-600 border-amber-200 hover:bg-amber-50"
+                                            onClick={() => handleVerification('pending')}
+                                        >
+                                            Unverify
                                         </Button>
                                     </div>
                                 )}
