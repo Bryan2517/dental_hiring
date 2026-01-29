@@ -5,11 +5,12 @@ export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   hint?: string;
   icon?: ReactNode;
+  containerClassName?: string;
 }
 
-export function Input({ className, label, hint, icon, ...props }: InputProps) {
+export function Input({ className, label, hint, icon, containerClassName, ...props }: InputProps) {
   return (
-    <label className="flex w-full flex-col gap-1 text-sm">
+    <label className={cn("flex w-full flex-col gap-1 text-sm", containerClassName)}>
       {label && <span className="font-medium text-gray-800">{label}</span>}
       <div className="relative">
         {icon && (

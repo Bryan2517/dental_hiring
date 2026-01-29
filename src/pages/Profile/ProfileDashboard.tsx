@@ -31,6 +31,7 @@ import { Education, WorkExperience } from '../../lib/types';
 import { addEducation } from '../../lib/api/education';
 import { addWorkExperience } from '../../lib/api/work_experience';
 import { Avatar, AvatarFallback, AvatarImage } from '../../components/ui/avatar';
+import SeekerPublicProfileEmbed from '../../components/profile/SeekerPublicProfileEmbed';
 
 const sidebarLinks = [
   { to: '/seekers/dashboard', label: 'Dashboard' },
@@ -58,6 +59,7 @@ export default function ProfileDashboard() {
   const { unreadTotal, openChat } = useChat();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('profile');
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
 
   const handleConfirmSignOut = async () => {
@@ -527,207 +529,9 @@ export default function ProfileDashboard() {
         onChange={setActiveTab}
       />
 
-      {activeTab === 'profile' && (
-        <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm space-y-6">
-
-          {/* Avatar Upload Section */}
-          <div className="flex flex-col items-center justify-center p-6 border-b border-gray-100">
-            <div className="relative group">
-              <Avatar className="h-24 w-24 border-4 border-white shadow-md">
-                {/* We don't have the profile avatar_url directly in local state 'profileFields' usually, 
-                     but we can get it from 'user' or fetch it. 
-                     Let's verify where 'profileFields' comes from or if we need 'profile' state.
-                     Looking at existing code, 'profileFields' seems to be local state for edits.
-                     We should use the fetched profile data for the avatar src.
-                     However, 'fetchData' populates 'profileFields' but maybe not avatar.
-                     Let's check 'fetchData' implementation in a moment. 
-                     Safe bet: use user?.user_metadata?.avatar_url or fetch it. 
-                     Wait, 'getProfile' usually returns it.
-                     For now, I'll assume we can get it from a new 'profile' state or similar if I add it,
-                     OR I can pull it from 'user' if AuthContext keeps it updated (it might not).
-                     Let's look at lines 47-49 of ProfileDashboard.tsx again. 
-                     'defaultProfileFields' doesn't have avatar.
-                     I'll add 'avatarUrl' to 'profileFields' or a separate state variable.
-                  */}
-                <AvatarImage
-                  src={profileFields.avatarUrl || ''}
-                  alt="Profile"
-                  className="object-cover"
-                />
-                <AvatarFallback className="text-xl bg-gray-100 text-gray-600 font-bold">
-                  {profileFields.fullName ? profileFields.fullName.charAt(0).toUpperCase() : '?'}
-                </AvatarFallback>
-              </Avatar>
-
-              <div
-                className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-white"
-                onClick={() => avatarInputRef.current?.click()}
-              >
-                <Camera className="h-8 w-8" />
-              </div>
-
-              <input
-                type="file"
-                ref={avatarInputRef}
-                className="hidden"
-                accept="image/*"
-                onChange={handleAvatarUpload}
-                disabled={avatarUploading}
-              />
-            </div>
-            {avatarUploading && <p className="text-xs text-gray-500 mt-2">Uploading...</p>}
-            <p className="text-sm text-gray-500 mt-2">Click to change profile picture</p>
-          </div>
-
-          <div className="rounded-2xl border border-dashed border-black bg-white p-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-lg font-semibold text-gray-900">Upload a resume</p>
-                <p className="text-sm text-gray-500">Upload your latest resume to be visible to employers.</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  className="hidden"
-                  accept=".pdf"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-
-
-                    if (file) {
-                      setToastContent({
-                        title: 'File Selected',
-                        description: `Starting analysis for ${file.name}...`
-                      });
-                      setShowToast(true);
-
-                      initiateAnalysis(file);
-                      e.target.value = ''; // Reset
-                    }
-                  }}
-                />
-                <Button
-                  variant="secondary"
-                  className="gap-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border-indigo-100"
-                  disabled={isAnalyzing}
-                  onClick={() => {
-                    fileInputRef.current?.click();
-                  }}
-                  icon={!isAnalyzing ? <ScanText className="h-4 w-4" /> : undefined}
-                >
-                  {isAnalyzing ? 'Analyzing...' : 'Auto-fill from Resume'}
-                </Button>
-              </div>
-            </div>
-            <p className="text-xs text-gray-400">
-              Latest resume:{' '}
-              {latestResume ? (
-                <span className="font-semibold text-gray-700">{latestResume.name}</span>
-              ) : (
-                'none yet'
-              )}
-            </p>
-
-            <div className="mt-4">
-              <button
-                type="button"
-                onClick={() => setShowUploadModal(true)}
-                className="flex w-full items-center justify-between rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-brand shadow-sm transition hover:border-brand"
-              >
-                <span className="flex items-center gap-2">
-                  <UploadCloud className="h-4 w-4" />
-                  <span>{latestResume ? 'Upload new resume' : 'Upload resume'}</span>
-                </span>
-                <span className="text-xs text-gray-500">.pdf .docx</span>
-              </button>
-            </div>
-            {resumes.length > 0 && (
-              <div className="mt-4 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 text-sm text-gray-600">
-                <p className="text-xs font-semibold text-gray-800">Stored resume</p>
-                <p className="text-sm font-semibold text-gray-900">{resumes[0].name}</p>
-                <p className="text-xs text-gray-500">Uploaded {formatDate(resumes[0].uploadedAt)}</p>
-              </div>
-            )}
-          </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            <Input
-              label="Full name"
-              value={profileFields.fullName}
-              onChange={(event) => handleFieldChange('fullName', event.target.value)}
-            />
-            <Input
-              label="Email"
-              type="email"
-              value={profileFields.email}
-              disabled // Email usually can't be changed easily
-              className="bg-gray-50"
-              onChange={(event) => handleFieldChange('email', event.target.value)}
-            />
-            <Select
-              label="I am a..."
-              value={profileFields.seekerType}
-              onChange={(event) => handleFieldChange('seekerType', event.target.value)}
-            >
-              <option value="student">Student</option>
-              <option value="fresh_grad">Fresh Graduate</option>
-              <option value="professional">Professional</option>
-            </Select>
-            <Input
-              label="School"
-              value={profileFields.school}
-              placeholder="e.g. Mahsa University"
-              onChange={(event) => handleFieldChange('school', event.target.value)}
-            />
-            <Input
-              label="Graduation date"
-              type="month"
-              value={profileFields.graduation}
-              onChange={(event) => handleFieldChange('graduation', event.target.value)}
-            />
-            <div className="md:col-span-2">
-              <div>
-                <p className="text-sm font-semibold text-gray-800">Clinical exposure</p>
-                <p className="text-xs text-gray-500">
-                  Select the skills you have experience with.
-                </p>
-              </div>
-              <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                {exposures.map((item) => (
-                  <Checkbox
-                    key={item}
-                    label={item}
-                    checked={selectedExposures.includes(item)}
-                    onChange={() => toggleExposure(item)}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <div className="md:col-span-2">
-              <EducationSection key={`edu-${dataVersion}`} userId={user!.id} />
-            </div>
-
-            <div className="md:col-span-2">
-              <WorkExperienceSection key={`exp-${dataVersion}`} userId={user!.id} />
-            </div>
-
-            <div className="md:col-span-2 flex justify-end items-center gap-2">
-              <Button variant="primary" onClick={handleSaveProfile} disabled={loading}>
-                {loading ? 'Saving...' : 'Save Profile'}
-              </Button>
-              <Button
-                variant="ghost"
-                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                onClick={() => setShowSignOutConfirm(true)}
-              >
-                Sign Out
-              </Button>
-            </div>
-          </div>
-        </div>
-      )
-      }
+      {activeTab === 'profile' && user && (
+        <SeekerPublicProfileEmbed userId={user.id} />
+      )}
 
       {
         activeTab === 'applications' && (

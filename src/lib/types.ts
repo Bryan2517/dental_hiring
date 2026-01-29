@@ -85,8 +85,10 @@ export interface Conversation {
   organization?: {
     org_name: string;
     logo_url?: string | null;
+    slug?: string;
   };
   seeker?: {
+    id: string;
     full_name: string;
     avatar_url?: string | null;
   };

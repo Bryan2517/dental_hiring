@@ -4,6 +4,7 @@ import EmployersLanding from './pages/Marketing/EmployersLanding';
 import JobsList from './pages/Jobs/JobsList';
 import JobDetails from './pages/Jobs/JobDetails';
 import ProfileDashboard from './pages/Profile/ProfileDashboard';
+import EditProfilePage from './pages/Profile/EditProfilePage';
 import EmployerDashboard from './pages/Employer/EmployerDashboard';
 import PostJob from './pages/Employer/PostJob';
 import ApplicantsPipeline from './pages/Employer/ApplicantsPipeline';
@@ -44,6 +45,7 @@ function App() {
            Let's just import MessagesPage first. 
         */}
         <Route path="/seekers/dashboard" element={<ProtectedRoute requiredRole="seeker"><ProfileDashboard /></ProtectedRoute>} />
+        <Route path="/seekers/dashboard/edit" element={<ProtectedRoute requiredRole="seeker"><EditProfilePage /></ProtectedRoute>} />
         <Route
           path="/employer/dashboard"
           element={

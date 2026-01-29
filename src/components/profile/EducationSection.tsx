@@ -153,7 +153,7 @@ export default function EducationSection({ userId, initialData = [] }: Education
     return (
         <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm space-y-4">
             <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">Education</h3>
+                <h3 className="text-xl font-bold text-gray-900">Education</h3>
                 <Button variant="outline" size="sm" onClick={handleOpenAdd} icon={<Plus className="h-4 w-4" />}>
                     Add Education
                 </Button>
@@ -165,11 +165,11 @@ export default function EducationSection({ userId, initialData = [] }: Education
                 )}
                 {educationList.map((edu) => (
                     <div key={edu.id} className="relative flex flex-col gap-1 border-l-2 border-gray-200 pl-4 py-1">
-                        <h4 className="font-semibold text-gray-900">{edu.institutionName}</h4>
-                        <p className="text-sm text-gray-700">
+                        <h4 className="text-lg font-semibold text-gray-900">{edu.institutionName}</h4>
+                        <p className="text-base text-gray-700">
                             {edu.degree} {edu.fieldOfStudy && `in ${edu.fieldOfStudy}`}
                         </p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-sm text-gray-500">
                             {formatDate(edu.startDate)} - {edu.isCurrent ? 'Present' : formatDate(edu.endDate)}
                         </p>
                         {edu.description && <p className="text-sm text-gray-600 mt-1">{edu.description}</p>}
@@ -198,6 +198,8 @@ export default function EducationSection({ userId, initialData = [] }: Education
                         value={formData.institutionName}
                         onChange={(e) => setFormData({ ...formData, institutionName: e.target.value })}
                         placeholder="e.g. University of Malaya"
+                        containerClassName="text-base"
+                        className="text-base px-4 py-3"
                     />
                     <div className="grid grid-cols-2 gap-4">
                         <Input
@@ -205,12 +207,16 @@ export default function EducationSection({ userId, initialData = [] }: Education
                             value={formData.degree}
                             onChange={(e) => setFormData({ ...formData, degree: e.target.value })}
                             placeholder="e.g. Bachelor of Dental Surgery"
+                            containerClassName="text-base"
+                            className="text-base px-4 py-3"
                         />
                         <Input
                             label="Field of Study"
                             value={formData.fieldOfStudy}
                             onChange={(e) => setFormData({ ...formData, fieldOfStudy: e.target.value })}
                             placeholder="e.g. Dentistry"
+                            containerClassName="text-base"
+                            className="text-base px-4 py-3"
                         />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
@@ -219,6 +225,8 @@ export default function EducationSection({ userId, initialData = [] }: Education
                             type="date"
                             value={formData.startDate}
                             onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                            containerClassName="text-base"
+                            className="text-base px-4 py-3"
                         />
                         <Input
                             label="End Date"
@@ -226,18 +234,23 @@ export default function EducationSection({ userId, initialData = [] }: Education
                             value={formData.endDate}
                             disabled={formData.isCurrent}
                             onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                            containerClassName="text-base"
+                            className="text-base px-4 py-3"
                         />
                     </div>
                     <Checkbox
                         label="I am currently studying here"
                         checked={formData.isCurrent}
                         onChange={(e) => setFormData({ ...formData, isCurrent: e.target.checked, endDate: e.target.checked ? '' : formData.endDate })}
+                        textClassName="text-base"
                     />
                     <Input
                         label="Description (Optional)"
                         value={formData.description}
                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                         placeholder="Activities, honors, etc."
+                        containerClassName="text-base"
+                        className="text-base px-4 py-3"
                     />
                     <div className="flex justify-end gap-2 pt-2">
                         <Button variant="ghost" onClick={() => setIsModalOpen(false)}>Cancel</Button>

@@ -1,4 +1,5 @@
 import { useRef, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useChat } from '../../contexts/ChatContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { Send, ArrowLeft, MoreVertical, Phone, Video, Paperclip, X, FileText, Download, Trash2, Copy, Reply, MoreHorizontal } from 'lucide-react';
@@ -9,6 +10,7 @@ import { cn } from '../../lib/utils'; // Keep importing cn for conditional class
 export default function ChatWindow() {
     const { activeConversation, messages, sendMessage, deleteMessage, messagesLoading, setActiveConversationId } = useChat();
     const { user, userRole } = useAuth();
+    const navigate = useNavigate();
     const [newMessage, setNewMessage] = useState('');
     const [attachedFile, setAttachedFile] = useState<File | null>(null);
     const [activeMenu, setActiveMenu] = useState<string | null>(null);
@@ -36,6 +38,13 @@ export default function ChatWindow() {
 
     const otherPartyName = userRole === 'seeker' ? activeConversation.organization?.org_name : activeConversation.seeker?.full_name;
     const otherPartyAvatar = userRole === 'seeker' ? activeConversation.organization?.logo_url : activeConversation.seeker?.avatar_url;
+
+
+
+    // Determine profile URL for the other party
+    const otherPartyProfileUrl = userRole === 'seeker'
+        ? (activeConversation.organization?.org_name ? `/organizations/${encodeURIComponent(activeConversation.organization.org_name)}` : null)
+        : (activeConversation.seekerId ? `/seekers/${activeConversation.seekerId}` : null);
 
     const handleSend = async (e?: React.FormEvent) => {
         e?.preventDefault();
@@ -78,22 +87,27 @@ export default function ChatWindow() {
                     <Button variant="ghost" size="sm" className="md:hidden" onClick={() => setActiveConversationId(null)}>
                         <ArrowLeft className="h-5 w-5" />
                     </Button>
-                    <div className="relative h-10 w-10">
-                        {otherPartyAvatar ? (
-                            <img
-                                src={otherPartyAvatar}
-                                alt={otherPartyName}
-                                className="h-full w-full rounded-lg object-contain border border-gray-100 bg-white p-0.5"
-                            />
-                        ) : (
-                            <div className="flex h-full w-full items-center justify-center rounded-lg bg-gray-100 text-gray-500 font-semibold border border-gray-200">
-                                {otherPartyName?.[0]?.toUpperCase()}
-                            </div>
-                        )}
-                    </div>
-                    <div>
-                        <h3 className="font-semibold text-gray-900">{otherPartyName}</h3>
-                        <p className="text-xs text-gray-500">{activeConversation.job?.title || 'General Inquiry'}</p>
+                    <div
+                        className={cn("flex items-center gap-3", otherPartyProfileUrl ? "cursor-pointer hover:opacity-80 transition-opacity" : "")}
+                        onClick={() => otherPartyProfileUrl && navigate(otherPartyProfileUrl)}
+                    >
+                        <div className="relative h-10 w-10">
+                            {otherPartyAvatar ? (
+                                <img
+                                    src={otherPartyAvatar}
+                                    alt={otherPartyName}
+                                    className="h-full w-full rounded-lg object-contain border border-gray-100 bg-white p-0.5"
+                                />
+                            ) : (
+                                <div className="flex h-full w-full items-center justify-center rounded-lg bg-gray-100 text-gray-500 font-semibold border border-gray-200">
+                                    {otherPartyName?.[0]?.toUpperCase()}
+                                </div>
+                            )}
+                        </div>
+                        <div>
+                            <h3 className="text-xl font-bold text-gray-900">{otherPartyName}</h3>
+                            <p className="text-sm text-gray-500">{activeConversation.job?.title || 'General Inquiry'}</p>
+                        </div>
                     </div>
                 </div>
                 <div className="flex items-center gap-1">
@@ -143,7 +157,7 @@ export default function ChatWindow() {
                                         <div className="relative group">
                                             <div
                                                 className={cn(
-                                                    "relative rounded-2xl px-4 py-2 text-sm shadow-sm",
+                                                    "relative rounded-2xl px-5 py-3 text-base shadow-sm",
                                                     isMe
                                                         ? "bg-brand text-white rounded-br-none"
                                                         : "bg-white text-gray-900 rounded-bl-none"
@@ -151,7 +165,8 @@ export default function ChatWindow() {
                                             >
                                                 <div className="flex flex-wrap items-end gap-x-2">
                                                     <span>{msg.content}</span>
-                                                    <span className={cn("text-[10px] leading-none mb-0.5", isMe ? "text-white/70" : "text-gray-400")}>
+
+                                                    <span className={cn("text-xs leading-none mb-0.5", isMe ? "text-white/70" : "text-gray-400")}>
                                                         {format(new Date(msg.createdAt), 'HH:mm')}
                                                     </span>
                                                 </div>
@@ -166,10 +181,10 @@ export default function ChatWindow() {
                                                                 : "border-gray-200 bg-gray-50 hover:bg-gray-100"
                                                         )}
                                                     >
-                                                        <FileText className="h-4 w-4" />
-                                                        <span className="flex-1 truncate">{msg.attachmentName || 'File'}</span>
+                                                        <FileText className="h-5 w-5" />
+                                                        <span className="flex-1 truncate text-sm">{msg.attachmentName || 'File'}</span>
                                                         {msg.attachmentSize && (
-                                                            <span className="text-[10px]">({formatFileSize(msg.attachmentSize)})</span>
+                                                            <span className="text-xs">({formatFileSize(msg.attachmentSize)})</span>
                                                         )}
                                                         <Download className="h-3 w-3" />
                                                     </a>
@@ -298,9 +313,9 @@ export default function ChatWindow() {
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
                         placeholder="Type a message..."
-                        className="flex-1 rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand"
+                        className="flex-1 rounded-full border border-gray-200 bg-gray-50 px-5 py-3 text-base outline-none focus:border-brand focus:ring-1 focus:ring-brand"
                     />
-                    <Button type="submit" size="icon" disabled={!newMessage.trim() && !attachedFile} className="rounded-full h-10 w-10 shrink-0">
+                    <Button type="submit" size="icon" disabled={!newMessage.trim() && !attachedFile} className="rounded-full h-12 w-12 shrink-0">
                         <Send className="h-5 w-5" />
                     </Button>
                 </form>

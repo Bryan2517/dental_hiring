@@ -95,15 +95,15 @@ export default function SeekerPublicProfile() {
 
     return (
         <AppShell background="muted" padded>
-            <div className="max-w-5xl mx-auto space-y-6">
+            <div className="max-w-7xl mx-auto space-y-8">
                 {/* Header Card */}
                 <div className="bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100">
                     <div className="h-32 bg-gradient-to-r from-indigo-50 to-blue-50 relative"></div>
                     <div className="px-8 pb-8">
                         <div className="relative -mt-12 mb-4 flex justify-between items-end">
-                            <Avatar className="h-24 w-24 border-4 border-white shadow-md">
+                            <Avatar className="h-28 w-28 border-4 border-white shadow-md">
                                 <AvatarImage src={profile.avatar_url || ''} alt={profile.full_name || ''} />
-                                <AvatarFallback className="text-xl bg-gray-100 text-gray-600 font-bold">{initials}</AvatarFallback>
+                                <AvatarFallback className="text-2xl bg-gray-100 text-gray-600 font-bold">{initials}</AvatarFallback>
                             </Avatar>
 
                             {/* Action Buttons */}
@@ -126,15 +126,15 @@ export default function SeekerPublicProfile() {
 
                         <div>
                             <div className="flex flex-col md:flex-row md:items-center gap-2">
-                                <h1 className="text-3xl font-bold text-gray-900">{profile.full_name}</h1>
+                                <h1 className="text-4xl font-bold text-gray-900">{profile.full_name}</h1>
                                 <Badge variant="info" className="w-fit">{seekerTypeLabel}</Badge>
                             </div>
 
                             {seekerProfile?.headline && (
-                                <p className="text-lg text-gray-600 mt-2 font-medium">{seekerProfile.headline}</p>
+                                <p className="text-xl text-gray-600 mt-2 font-medium">{seekerProfile.headline}</p>
                             )}
 
-                            <div className="flex flex-wrap items-center gap-4 mt-3 text-sm text-gray-500">
+                            <div className="flex flex-wrap items-center gap-5 mt-4 text-base text-gray-500">
                                 {(profile.city || profile.country) && (
                                     <div className="flex items-center gap-1">
                                         <MapPin className="h-4 w-4" />
@@ -156,22 +156,22 @@ export default function SeekerPublicProfile() {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Main Content */}
-                    <div className="md:col-span-2 space-y-6">
+                    <div className="lg:col-span-2 space-y-8">
                         {/* About Section */}
                         {seekerProfile?.bio && (
-                            <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-                                <h3 className="text-lg font-bold text-gray-900 mb-4">About</h3>
-                                <p className="text-gray-600 whitespace-pre-wrap leading-relaxed">
+                            <div className="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm">
+                                <h3 className="text-xl font-bold text-gray-900 mb-4">About</h3>
+                                <p className="text-base text-gray-600 whitespace-pre-wrap leading-relaxed">
                                     {seekerProfile.bio}
                                 </p>
                             </div>
                         )}
 
                         {/* Work Experience */}
-                        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-                            <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                        <div className="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm">
+                            <h3 className="text-xl font-bold text-gray-900 mb-5 flex items-center gap-2">
                                 <Briefcase className="h-5 w-5 text-gray-400" />
                                 Work Experience
                             </h3>
@@ -181,11 +181,11 @@ export default function SeekerPublicProfile() {
                                         <div key={exp.id} className="relative pl-4 border-l-2 border-gray-100 last:border-0 pb-1">
                                             <div className="absolute -left-[5px] top-1.5 h-2.5 w-2.5 rounded-full bg-gray-200 ring-4 ring-white"></div>
                                             <div className="mb-1">
-                                                <h4 className="text-base font-semibold text-gray-900">{exp.jobTitle}</h4>
-                                                <div className="text-sm text-gray-500 font-medium">{exp.companyName}</div>
+                                                <h4 className="text-lg font-semibold text-gray-900">{exp.jobTitle}</h4>
+                                                <div className="text-base text-gray-500 font-medium">{exp.companyName}</div>
                                             </div>
-                                            <div className="text-xs text-gray-400 mb-2 flex items-center gap-1">
-                                                <Calendar className="h-3 w-3" />
+                                            <div className="text-sm text-gray-400 mb-2 flex items-center gap-1">
+                                                <Calendar className="h-3.5 w-3.5" />
                                                 <span>
                                                     {new Date(exp.startDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short' })}
                                                     {' - '}
@@ -199,7 +199,7 @@ export default function SeekerPublicProfile() {
                                                 {exp.location && <span>• {exp.location}</span>}
                                             </div>
                                             {exp.description && (
-                                                <p className="text-sm text-gray-600 mt-2">{exp.description}</p>
+                                                <p className="text-base text-gray-600 mt-2">{exp.description}</p>
                                             )}
                                         </div>
                                     ))}
@@ -210,8 +210,8 @@ export default function SeekerPublicProfile() {
                         </div>
 
                         {/* Education */}
-                        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-                            <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                        <div className="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm">
+                            <h3 className="text-xl font-bold text-gray-900 mb-5 flex items-center gap-2">
                                 <GraduationCap className="h-5 w-5 text-gray-400" />
                                 Education
                             </h3>
@@ -221,10 +221,10 @@ export default function SeekerPublicProfile() {
                                         <div key={edu.id} className="relative pl-4 border-l-2 border-gray-100 last:border-0">
                                             <div className="absolute -left-[5px] top-1.5 h-2.5 w-2.5 rounded-full bg-gray-200 ring-4 ring-white"></div>
                                             <div className="mb-1">
-                                                <h4 className="text-base font-semibold text-gray-900">{edu.institutionName}</h4>
-                                                <div className="text-sm text-gray-500 font-medium">{edu.degree}{edu.fieldOfStudy ? `, ${edu.fieldOfStudy}` : ''}</div>
+                                                <h4 className="text-lg font-semibold text-gray-900">{edu.institutionName}</h4>
+                                                <div className="text-base text-gray-500 font-medium">{edu.degree}{edu.fieldOfStudy ? `, ${edu.fieldOfStudy}` : ''}</div>
                                             </div>
-                                            <div className="text-xs text-gray-400 mb-2">
+                                            <div className="text-sm text-gray-400 mb-2">
                                                 {new Date(edu.startDate).getFullYear()} - {edu.isCurrent ? 'Present' : new Date(edu.endDate).getFullYear()}
                                             </div>
                                         </div>
@@ -237,10 +237,10 @@ export default function SeekerPublicProfile() {
                     </div>
 
                     {/* Sidebar */}
-                    <div className="space-y-6">
+                    <div className="space-y-8">
                         {/* Skills / Clinical Exposure */}
-                        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-                            <h3 className="text-sm font-bold text-gray-900 mb-3 uppercase tracking-wider">Clinical Exposure</h3>
+                        <div className="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm">
+                            <h3 className="text-sm font-bold text-gray-900 mb-4 uppercase tracking-wider">Clinical Exposure</h3>
                             {seekerProfile?.clinical_exposures && Array.isArray(seekerProfile.clinical_exposures) && seekerProfile.clinical_exposures.length > 0 ? (
                                 <div className="flex flex-wrap gap-2">
                                     {seekerProfile.clinical_exposures.map((skill: string) => (
@@ -255,9 +255,9 @@ export default function SeekerPublicProfile() {
                         </div>
 
                         {/* Additional Info / At a Glance */}
-                        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-                            <h3 className="text-sm font-bold text-gray-900 mb-4 uppercase tracking-wider">At a Glance</h3>
-                            <div className="space-y-3 text-sm">
+                        <div className="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm">
+                            <h3 className="text-sm font-bold text-gray-900 mb-5 uppercase tracking-wider">At a Glance</h3>
+                            <div className="space-y-3 text-base">
                                 <div className="flex justify-between py-2 border-b border-gray-50">
                                     <span className="text-gray-500">Education Level</span>
                                     <span className="font-medium text-gray-900">{seekerProfile?.education_level || '-'}</span>

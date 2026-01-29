@@ -176,7 +176,7 @@ export default function EmployerDashboard() {
       subtitle="Manage postings and review applicants."
       hideNavigation
       actions={
-        <Button variant="primary" asChild icon={<Users className="h-4 w-4" />}>
+        <Button variant="primary" className='hover:text-white' asChild icon={<Users className="h-4 w-4" />}>
           <Link to="/employer/team">
             Team
           </Link>
@@ -255,7 +255,7 @@ export default function EmployerDashboard() {
                       <Button variant="outline" size="sm" asChild>
                         <Link to={`/jobs/${job.id}`}>Preview</Link>
                       </Button>
-                      <Button variant="primary" size="sm" asChild>
+                      <Button variant="primary" size="sm" asChild className='hover:text-white'>
                         <Link to={job.slug ? `/employer/applicants/${job.slug}` : `/employer/applicants?jobId=${job.id}`}>Applicants</Link>
                       </Button>
                     </div>

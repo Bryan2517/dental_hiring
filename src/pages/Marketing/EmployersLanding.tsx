@@ -79,7 +79,7 @@ export default function EmployersLanding() {
               Dental-first hiring with role templates, clinical skill checklists, and transparent pricing that keeps every posting predictable.
             </p>
             <div className="flex flex-wrap gap-3">
-              <Button variant="primary" size="lg" asChild>
+              <Button variant="primary" size="lg" asChild className="hover:text-white">
                 <Link to="/employer/post-job">Post a Job</Link>
               </Button>
               <Button variant="secondary" size="lg" asChild>

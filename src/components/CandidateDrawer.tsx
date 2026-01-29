@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { X, FileText, ExternalLink, MessageCircle } from 'lucide-react';
+import { X, FileText, ExternalLink, MessageCircle, User } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { updateApplicationNotes } from '../lib/api/applications';
 import { Candidate, JobStage } from '../lib/types';
@@ -69,13 +69,26 @@ export function CandidateDrawer({ candidate, open, onClose, onMove, orgId }: Can
               {candidate.school} - Grad {candidate.gradDate}
             </p>
           </div>
-          <button
-            onClick={onClose}
-            className="rounded-full p-2 text-gray-500 transition hover:bg-gray-100"
-            aria-label="Close candidate drawer"
-          >
-            <X className="h-5 w-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {candidate.seekerId && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                icon={<User className="h-4 w-4" />}
+                onClick={() => navigate(`/seekers/${candidate.seekerId}`)}
+              >
+                View Profile
+              </Button>
+            )}
+            <button
+              onClick={onClose}
+              className="rounded-full p-2 text-gray-500 transition hover:bg-gray-100"
+              aria-label="Close candidate drawer"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
         </div>
         <div className="space-y-5 p-5">
           <div>

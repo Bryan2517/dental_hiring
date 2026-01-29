@@ -142,7 +142,7 @@ export default function ApplicantsPipeline() {
       }
     }
     fetchData();
-  }, [user]);
+  }, [user, slug, searchParams]);
 
   const handleMove = async (id: string, status: JobStage) => {
     // Optimistic update

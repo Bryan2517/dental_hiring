@@ -226,7 +226,7 @@ export default function SeekersLanding() {
               every application.
             </p>
             <div className="flex flex-wrap gap-3">
-              <Button variant="primary" size="xl" onClick={() => navigate('/jobs')}>
+              <Button variant="primary" size="xl" onClick={() => navigate('/jobs')} className='hover:text-white'>
                 Browse Jobs
               </Button>
               <Button variant="secondary" size="lg" onClick={() => navigate('/seekers/dashboard')}>
@@ -320,7 +320,7 @@ export default function SeekersLanding() {
           )}
         </div>
         <div className="flex justify-center">
-          <Button variant="primary" asChild>
+          <Button variant="primary" asChild className='hover:text-white'>
             <Link to="/jobs">View more</Link>
           </Button>
         </div>

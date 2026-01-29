@@ -187,7 +187,11 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         setLoading(true);
         const conv = await getOrCreateConversation(orgId, seekerId, jobId);
         if (conv) {
-            setConversations(prev => [conv, ...prev]);
+            setConversations(prev => {
+                // Ensure no duplicates
+                const filtered = prev.filter(c => c.id !== conv.id);
+                return [conv, ...filtered];
+            });
             setActiveConversation(conv);
         }
         setLoading(false);

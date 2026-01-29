@@ -29,6 +29,8 @@ export function TopNav() {
     if (path.startsWith('/organizations') && userRole === 'admin') return 'admin';
     if (path.startsWith('/organizations') && userRole === 'employer') return 'employer';
     if (path.startsWith('/jobs') && userRole === 'admin') return 'admin';
+    // Keep employer nav when viewing seeker public profiles (e.g., applicants)
+    if (path.match(/^\/seekers\/[a-f0-9-]+$/) && userRole === 'employer') return 'employer';
     return 'seeker';
   }, [location.pathname, userRole]);
 
@@ -137,14 +139,14 @@ export function TopNav() {
             {activeRole === 'employer' ? (
               <Link
                 to="/employer/post-job"
-                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-brand to-brand-hover px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:-translate-y-0.5"
+                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-brand to-brand-hover px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:-translate-y-0.5 hover:text-white"
               >
                 Post a Job
               </Link>
             ) : (
               <Link
                 to="/jobs"
-                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-brand to-brand-hover px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:-translate-y-0.5"
+                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-brand to-brand-hover px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:-translate-y-0.5 hover:text-white"
               >
                 <Briefcase className="h-4 w-4" />
                 Browse Jobs
@@ -157,7 +159,7 @@ export function TopNav() {
                   if (activeRole === 'employer') {
                     navigate('/employer/profile');
                   } else if (activeRole === 'seeker') {
-                    navigate(`/seekers/${user.id}`);
+                    navigate('/seekers/dashboard/edit');
                   }
                 }}
                 title="Your Profile"

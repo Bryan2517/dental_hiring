@@ -74,28 +74,28 @@ export default function ConversationList() {
 
                                     <div className="min-w-0 flex-1">
                                         <div className="flex items-center justify-between mb-0.5">
-                                            <span className={cn("font-medium truncate", isActive ? "text-brand" : "text-gray-900")}>
+                                            <span className={cn("font-medium truncate text-base", isActive ? "text-brand" : "text-gray-900")}>
                                                 {name || 'Unknown User'}
                                             </span>
                                             <div className="flex items-center gap-2 ml-2">
                                                 {conv.lastMessageAt && (
-                                                    <span className="text-[10px] text-gray-400 whitespace-nowrap">
+                                                    <span className="text-xs text-gray-400 whitespace-nowrap">
                                                         {formatDistanceToNow(new Date(conv.lastMessageAt), { addSuffix: false })}
                                                     </span>
                                                 )}
                                                 {(conv.unreadCount || 0) > 0 && (
-                                                    <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
+                                                    <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1.5 text-xs font-bold text-white">
                                                         {conv.unreadCount}
                                                     </span>
                                                 )}
                                             </div>
                                         </div>
                                         {conv.job?.title && (
-                                            <p className="text-xs text-brand/80 font-medium truncate mb-0.5">
+                                            <p className="text-sm text-brand/80 font-medium truncate mb-0.5">
                                                 {conv.job.title}
                                             </p>
                                         )}
-                                        <p className="truncate text-xs text-gray-500 line-clamp-1">
+                                        <p className="truncate text-sm text-gray-500 line-clamp-1">
                                             {conv.lastMessage?.senderId === user?.id && 'You: '}
                                             {lastMsg}
                                         </p>
