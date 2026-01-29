@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import { MessageCircle } from 'lucide-react';
 import { DashboardShell } from '../../layouts/DashboardShell';
 import { Candidate, JobStage } from '../../lib/types';
@@ -30,7 +30,7 @@ export default function ApplicantsPipeline() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [candidates, setCandidates] = useState<Candidate[]>([]);
-  const [jobs, setJobs] = useState<{ id: string, title: string }[]>([]);
+  const [jobs, setJobs] = useState<{ id: string, title: string, slug?: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | undefined>();
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
@@ -38,7 +38,8 @@ export default function ApplicantsPipeline() {
   const [toastMessage, setToastMessage] = useState<string>('');
   const [toastOpen, setToastOpen] = useState(false);
 
-  const [selectedJobId, setSelectedJobId] = useState<string>(searchParams.get('jobId') || '');
+  const { slug } = useParams<{ slug: string }>();
+  const [selectedJobId, setSelectedJobId] = useState<string>('');
   const [showShareModal, setShowShareModal] = useState(false);
   const [orgId, setOrgId] = useState<string | null>(null);
   const { conversations } = useChat();
@@ -49,11 +50,19 @@ export default function ApplicantsPipeline() {
   const currentJob = jobs.find(j => j.id === selectedJobId);
 
   // Update URL when filter changes
-  useEffect(() => {
-    if (selectedJobId) {
-      setSearchParams({ jobId: selectedJobId });
+  const handleJobChange = (jobId: string) => {
+    if (!jobId) {
+      navigate('/employer/applicants');
+      return;
     }
-  }, [selectedJobId, setSearchParams]);
+    const job = jobs.find(j => j.id === jobId);
+    if (job && job.slug) {
+      navigate(`/employer/applicants/${job.slug}`);
+    } else {
+      // Fallback for no slug
+      navigate(`/employer/applicants?jobId=${jobId}`);
+    }
+  };
 
   useEffect(() => {
     async function fetchData() {
@@ -73,7 +82,7 @@ export default function ApplicantsPipeline() {
           // Fetch candidates and jobs in parallel
           const [candidatesData, jobsData] = await Promise.all([
             getCandidatesForOrg(org.id),
-            supabase.from('jobs').select('id, title').eq('org_id', org.id).eq('status', 'published').order('created_at', { ascending: false })
+            supabase.from('jobs').select('id, title, slug').eq('org_id', org.id).eq('status', 'published').order('created_at', { ascending: false })
           ]);
 
           setCandidates(candidatesData);
@@ -83,16 +92,45 @@ export default function ApplicantsPipeline() {
           if (jobsData.data && jobsData.data.length > 0) {
             setJobs(jobsData.data);
 
-            // Determine initial job selection
-            const urlJobId = searchParams.get('jobId');
-            const isValidJob = urlJobId && jobsData.data.some(j => j.id === urlJobId);
+            // Determine initial job selection from SLUG or Query Param
 
-            if (isValidJob) {
-              setSelectedJobId(urlJobId!);
-            } else {
-              // Default to first job (most recent due to order) if no valid ID in URL
-              setSelectedJobId(jobsData.data[0].id);
+            // 1. Try slug first
+            let initialJobId = '';
+
+            if (slug) {
+              // Try to match slug directly
+              const matchedJob = jobsData.data.find(j => j.slug === slug);
+              if (matchedJob) {
+                initialJobId = matchedJob.id;
+              } else {
+                // Try parsing ID from slug (legacy or just in case)
+                // Simple check if slug ends with UUID
+                const match = slug.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
+                if (match) {
+                  const potentialId = match[1];
+                  if (jobsData.data.some(j => j.id === potentialId)) {
+                    initialJobId = potentialId;
+                  }
+                }
+              }
             }
+
+            // 2. Fallback to query param
+            if (!initialJobId) {
+              const urlJobId = searchParams.get('jobId');
+              if (urlJobId && jobsData.data.some(j => j.id === urlJobId)) {
+                initialJobId = urlJobId;
+              }
+            }
+
+            // 3. Fallback to first job
+            if (!initialJobId) {
+              initialJobId = jobsData.data[0].id;
+              // Optionally replace URL to show the slug of the first job?
+              // Let's not auto-navigate yet to avoid redirect loop issues, just select it in state.
+            }
+
+            setSelectedJobId(initialJobId);
           } else {
             setJobs([]);
           }
@@ -270,7 +308,7 @@ export default function ApplicantsPipeline() {
             <Select
               className="min-w-[200px]"
               value={selectedJobId}
-              onChange={(e) => setSelectedJobId(e.target.value)}
+              onChange={(e) => handleJobChange(e.target.value)}
               disabled={jobs.length === 0}
             >
               {jobs.map(job => (

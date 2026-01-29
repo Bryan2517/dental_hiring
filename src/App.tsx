@@ -30,7 +30,7 @@ function App() {
         <Route path="/employers" element={<EmployersLanding />} />
         <Route path="/about" element={<About />} />
         <Route path="/jobs" element={<JobsList />} />
-        <Route path="/jobs/:id" element={<JobDetails />} />
+        <Route path="/jobs/:slug" element={<JobDetails />} />
         {/* Login and register flows are now handled via modal triggered from the header */}
         <Route
           path="/messages"
@@ -61,7 +61,23 @@ function App() {
           }
         />
         <Route
+          path="/employer/jobs/:slug/edit"
+          element={
+            <ProtectedRoute requiredRole="employer">
+              <PostJob />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/employer/applicants"
+          element={
+            <ProtectedRoute requiredRole="employer">
+              <ApplicantsPipeline />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/employer/applicants/:slug"
           element={
             <ProtectedRoute requiredRole="employer">
               <ApplicantsPipeline />

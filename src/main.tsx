@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { ChatProvider } from './contexts/ChatContext';
+import { EmployerPointsProvider } from './contexts/EmployerPointsContext';
 import App from './App';
 import './index.css';
 
@@ -17,7 +18,9 @@ ReactDOM.createRoot(rootElement).render(
     <BrowserRouter>
       <AuthProvider>
         <ChatProvider>
-          <App />
+          <EmployerPointsProvider>
+            <App />
+          </EmployerPointsProvider>
         </ChatProvider>
       </AuthProvider>
     </BrowserRouter>

@@ -263,6 +263,7 @@ export default function OrganizationProfile() {
                                         onDelete={handleDeleteJob}
                                         hasApplied={appliedJobIds.has(job.id)}
                                         onApply={() => navigate(`/jobs/${job.id}`)}
+                                        canEdit={userRole === 'employer' && user?.id === organization.owner_user_id}
                                     />
                                 ))
                             )}

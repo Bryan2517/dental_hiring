@@ -47,3 +47,34 @@ export function toPostgresDate(date?: string): string | null {
   }
   return date;
 }
+// Helper to create SEO-friendly slugs: "dental-assistant-7c57b5e6"
+export function createJobSlug(job: { id: string; roleType: string; slug?: string }) {
+  // Always use stored slug if available
+  if (job.slug) return job.slug;
+
+  // Fallback: Generate consistent slug using first 8 chars of UUID
+  const titleSlug = job.roleType
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-') // Replace non-alphanumeric chars with hyphens
+    .replace(/^-+|-+$/g, ''); // Trim leading/trailing hyphens
+  return `${titleSlug}-${job.id.substring(0, 8)}`;
+}
+
+// Helper to extract ID from slug: "dental-assistant-12345" -> "12345"
+// Assumes the ID is the last part after the last hyphen.
+// However, UUIDs contain hyphens.
+// Strategy: Since UUIDs are standard, we can verify if the last part is a UUID or if the whole thing is a UUID.
+// Actually, a simpler strategy for "slug-ID" where ID is a UUID:
+// Split by hyphen. If the last 5 parts form a UUID structure (8-4-4-4-12 chars), that's the ID.
+// OR simpler: The ID is the UUID at the end.
+// We know our IDs are UUIDs.
+export function getJobIdFromSlug(slug: string): string {
+  // If it's just a UUID (old links), return it
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (uuidRegex.test(slug)) return slug;
+
+  // Otherwise, extract the last 36 characters if they look like a UUID
+  // Or simpler, just take the last 36 chars? Use a robust regex match at end of string.
+  const match = slug.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
+  return match ? match[1] : slug;
+}

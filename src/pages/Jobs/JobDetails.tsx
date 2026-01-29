@@ -9,16 +9,19 @@ import { Building2, MapPin, Share2, ShieldCheck, Sparkles, Star, Wallet, Check }
 import { Job } from '../../lib/types';
 import { timeAgo } from '../../lib/utils';
 import { Breadcrumbs } from '../../components/Breadcrumbs';
-import { getJobById, getJobs, saveJob, unsaveJob, getSavedJobs } from '../../lib/api/jobs';
+import { getJobById, getJobBySlug, getJobs, saveJob, unsaveJob, getSavedJobs } from '../../lib/api/jobs';
 import { getUserDocuments } from '../../lib/api/profiles';
+
 import { getApplications } from '../../lib/api/applications';
+import { getJobIdFromSlug } from '../../lib/utils';
 import { useAuth } from '../../contexts/AuthContext';
 import { Toast } from '../../components/ui/toast';
 
 import { ShareModal } from '../../components/ShareModal';
 
 export default function JobDetails() {
-  const { id } = useParams<{ id: string }>();
+  const { slug } = useParams<{ slug: string }>();
+  const id = slug ? getJobIdFromSlug(slug) : undefined;
   const { user, userRole, openAuthModal } = useAuth();
   const navigate = useNavigate();
   const [job, setJob] = useState<Job | null>(null);
@@ -34,15 +37,31 @@ export default function JobDetails() {
 
   useEffect(() => {
     async function loadJob() {
-      if (!id) return;
+      if (!slug) return;
       try {
         setLoading(true);
 
-        // Fetch job, saved status, and application status in parallel
-        const [jobData, savedJobs, applications] = await Promise.all([
-          getJobById(id),
+        // Determine if we should fetch by ID or Slug
+        // If it looks like a UUID or ends with UUID, try ID first (legacy support)
+        const uuidMatch = slug.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
+        const isUuid = !!uuidMatch;
+        const lookupId = uuidMatch ? uuidMatch[1] : undefined;
+
+        let jobData: Job | null = null;
+
+        if (isUuid && lookupId) {
+          jobData = await getJobById(lookupId);
+        } else {
+          jobData = await getJobBySlug(slug);
+        }
+
+        // If we found a job, use its ID for related queries
+        const realId = jobData?.id;
+
+        // Fetch saved status and application status in parallel if job found
+        const [savedJobs, applications] = await Promise.all([
           user && userRole === 'seeker' ? getSavedJobs(user.id) : Promise.resolve([]),
-          user && userRole === 'seeker' ? getApplications({ seeker_user_id: user.id, job_id: id }) : Promise.resolve([])
+          user && userRole === 'seeker' && realId ? getApplications({ seeker_user_id: user.id, job_id: realId }) : Promise.resolve([])
         ]);
 
         setJob(jobData);

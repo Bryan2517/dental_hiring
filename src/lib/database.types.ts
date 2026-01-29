@@ -372,6 +372,7 @@ export type Database = {
           specialty_tags: string[]
           status: Database["public"]["Enums"]["job_status"]
           title: string
+          slug: string | null
           training_provided: boolean
           updated_at: string
         }
@@ -400,6 +401,7 @@ export type Database = {
           specialty_tags?: string[]
           status?: Database["public"]["Enums"]["job_status"]
           title: string
+          slug?: string | null
           training_provided?: boolean
           updated_at?: string
         }
@@ -428,6 +430,7 @@ export type Database = {
           specialty_tags?: string[]
           status?: Database["public"]["Enums"]["job_status"]
           title?: string
+          slug?: string | null
           training_provided?: boolean
           updated_at?: string
         }

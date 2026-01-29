@@ -8,6 +8,8 @@ import { Modal } from './ui/modal';
 import { Toast } from './ui/toast';
 import { useAuth } from '../contexts/AuthContext';
 import { getUsersOrganizations } from '../lib/api/organizations';
+import { useEmployerPoints } from '../contexts/EmployerPointsContext';
+import { Plus } from 'lucide-react';
 
 export function TopNav() {
   const { userRole, signOut, user, openAuthModal } = useAuth();
@@ -16,6 +18,7 @@ export function TopNav() {
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
   const [showSignOutToast, setShowSignOutToast] = useState(false);
   const [employerOrgName, setEmployerOrgName] = useState<string | null>(null);
+  const { points, addPoints } = useEmployerPoints();
 
   const activeRole = useMemo<Role>(() => {
     const path = location.pathname;
@@ -109,6 +112,20 @@ export function TopNav() {
           </nav>
 
           <div className="flex items-center gap-3">
+            {activeRole === 'employer' && (
+              <div className="hidden md:flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-200">
+                <span className="text-sm font-medium text-gray-600">
+                  <span className="text-brand font-bold">{points}</span> pts
+                </span>
+                <button
+                  onClick={() => addPoints(50)}
+                  className="p-0.5 rounded-full hover:bg-gray-200 text-brand transition-colors"
+                  title="Top up credits (Mock)"
+                >
+                  <Plus className="h-3 w-3" />
+                </button>
+              </div>
+            )}
             {activeRole !== 'admin' && (
               <Link
                 to={activeRole === 'employer' ? '/seekers' : '/employers'}

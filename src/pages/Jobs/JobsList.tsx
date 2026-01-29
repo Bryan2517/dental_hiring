@@ -9,6 +9,7 @@ import { Breadcrumbs } from '../../components/Breadcrumbs';
 import { getJobs, saveJob, unsaveJob, getSavedJobs, hideJob, unhideJob, getHiddenJobIds, deleteJob } from '../../lib/api/jobs';
 import { getUserDocuments } from '../../lib/api/profiles';
 import { getApplications } from '../../lib/api/applications';
+import { getUsersOrganizations } from '../../lib/api/organizations';
 import { useAuth } from '../../contexts/AuthContext';
 import { Toast } from '../../components/ui/toast';
 
@@ -43,6 +44,7 @@ export default function JobsList() {
   const [appliedJobIds, setAppliedJobIds] = useState<Set<string>>(new Set());
   const [toastOpen, setToastOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const [userOrgIds, setUserOrgIds] = useState<Set<string>>(new Set());
 
   const handleApplyClick = (job: Job) => {
     if (!user || userRole !== 'seeker') {
@@ -183,6 +185,10 @@ export default function JobsList() {
           apiCalls.push(getApplications({ seeker_user_id: user.id }));
         }
 
+        if (user && userRole === 'employer') {
+          apiCalls.push(getUsersOrganizations(user.id));
+        }
+
         const results = await Promise.all(apiCalls);
         const { data: jobsData, count } = results[0];
         setJobs(jobsData);
@@ -191,17 +197,25 @@ export default function JobsList() {
         // Since totalPages is derived, we need a state for it if it comes from server
         // Let's add setTotalPages state
 
-        if (results[1]) {
-          setSavedJobIds(new Set(results[1].map((j: any) => j.id)));
+        if (userRole === 'seeker') {
+          if (results[1]) setSavedJobIds(new Set(results[1].map((j: any) => j.id)));
+          if (results[2]) setHiddenJobIds(new Set(results[2]));
+          if (results[3]) setResumes(results[3]);
+          if (results[4]) setAppliedJobIds(new Set(results[4].map((a: any) => a.jobId)));
         }
-        if (results[2]) {
-          setHiddenJobIds(new Set(results[2]));
-        }
-        if (results[3]) {
-          setResumes(results[3]);
-        }
-        if (results[4]) {
-          setAppliedJobIds(new Set(results[4].map((a: any) => a.jobId)));
+
+        if (userRole === 'employer') {
+          // If seeker calls were skipped, result index depends. 
+          // But actually we are pushing to apiCalls. 
+          // Let's rely on array length or just check the last item if we are sure order.
+          // Better to manage indexes more safely or check data shape.
+          // Since we branch on role:
+          const orgs = results[results.length - 1]; // It will be the last pushed
+          if (Array.isArray(orgs) && orgs.length > 0 && 'org_name' in orgs[0]) {
+            setUserOrgIds(new Set(orgs.map((o: any) => o.id)));
+          } else if (Array.isArray(orgs) && orgs.length === 0) {
+            setUserOrgIds(new Set());
+          }
         }
 
         // Return count to update totalPages
@@ -279,6 +293,7 @@ export default function JobsList() {
                   onUndo={() => handleUndoHide(job)}
                   hasApplied={appliedJobIds.has(job.id)}
                   onDelete={handleDeleteJob}
+                  canEdit={userOrgIds.has(job.orgId)}
                 />
               ))}
               {pageJobs.length === 0 && (

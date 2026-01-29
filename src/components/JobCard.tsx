@@ -5,7 +5,7 @@ import { Job } from '../lib/types';
 import { Badge } from './ui/badge';
 import { TagPill } from './TagPill';
 import { Button } from './ui/button';
-import { timeAgo } from '../lib/utils';
+import { timeAgo, createJobSlug } from '../lib/utils';
 import { cn } from '../lib/utils';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -19,12 +19,13 @@ interface JobCardProps {
   onUndo?: () => void;
   hasApplied?: boolean;
   onDelete?: (job: Job) => void;
+  canEdit?: boolean;
 }
 
-export function JobCard({ job, onApply, isSaved, onToggleSave, onHide, isHidden, onUndo, hasApplied, onDelete }: JobCardProps) {
+export function JobCard({ job, onApply, isSaved, onToggleSave, onHide, isHidden, onUndo, hasApplied, onDelete, canEdit }: JobCardProps) {
   const navigate = useNavigate();
   const { userRole } = useAuth();
-  const goToDetails = () => !isHidden && navigate(`/jobs/${job.id}`);
+  const goToDetails = () => !isHidden && navigate(`/jobs/${createJobSlug(job)}`);
 
   if (isHidden) {
     return (
@@ -183,24 +184,40 @@ export function JobCard({ job, onApply, isSaved, onToggleSave, onHide, isHidden,
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" asChild>
-            <Link to={`/jobs/${job.id}`} onClick={(event) => event.stopPropagation()}>
+            <Link to={`/jobs/${createJobSlug(job)}`} onClick={(event) => event.stopPropagation()}>
               Details
             </Link>
           </Button>
-          <Button
-            variant={hasApplied ? "outline" : "primary"}
-            size="sm"
-            disabled={hasApplied}
-            rightIcon={hasApplied ? <Check className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
-            onClick={(event) => {
-              event.stopPropagation();
-              if (!hasApplied) {
-                onApply?.(job);
-              }
-            }}
-          >
-            {hasApplied ? 'Applied' : 'Quick apply'}
-          </Button>
+
+          {canEdit ? (
+            <Button
+              variant="outline"
+              size="sm"
+              asChild
+            >
+              <Link
+                to={`/employer/jobs/${createJobSlug(job)}/edit`}
+                onClick={(e) => e.stopPropagation()}
+              >
+                Edit Job
+              </Link>
+            </Button>
+          ) : (
+            <Button
+              variant={hasApplied ? "outline" : "primary"}
+              size="sm"
+              disabled={hasApplied}
+              rightIcon={hasApplied ? <Check className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
+              onClick={(event) => {
+                event.stopPropagation();
+                if (!hasApplied) {
+                  onApply?.(job);
+                }
+              }}
+            >
+              {hasApplied ? 'Applied' : 'Quick apply'}
+            </Button>
+          )}
         </div>
       </div>
     </div>

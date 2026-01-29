@@ -28,6 +28,7 @@ export interface Job {
   salaryMax?: number;
   orgId: string;
   logoUrl?: string;
+  slug?: string;
 }
 
 export interface Candidate {

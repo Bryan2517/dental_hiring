@@ -4,11 +4,13 @@ import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Link } from 'react-router-dom';
 import { TagPill } from '../../components/TagPill';
+import { JobCard } from '../../components/JobCard';
 import { Breadcrumbs } from '../../components/Breadcrumbs';
 import { JobStage } from '../../lib/types';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { getUsersOrganizations } from '../../lib/api/organizations';
+import { getJobs } from '../../lib/api/jobs';
 import { ChevronsUpDown, Building2, Users } from 'lucide-react';
 import {
   DropdownMenu,
@@ -63,16 +65,12 @@ export default function EmployerDashboard() {
           localStorage.setItem('activeOrgId', activeOrg.id);
 
           // 2. Get Active Jobs
-          const { data: jobsData, error: jobsError } = await supabase
-            .from('jobs')
-            .select('*')
-            .eq('org_id', activeOrg.id)
-            .eq('status', 'published')
-            .order('created_at', { ascending: false })
-            .limit(5);
-
-          if (jobsError) console.error('Error fetching jobs:', jobsError);
-          else setActiveJobs(jobsData || []);
+          const { data: jobsData } = await getJobs({
+            orgId: activeOrg.id,
+            status: 'published',
+            limit: 5
+          });
+          setActiveJobs(jobsData || []);
 
           // 3. Get Applications
           const { data: appsData, error: appsError } = await supabase
@@ -250,24 +248,15 @@ export default function EmployerDashboard() {
                 activeJobs.map((job) => (
                   <div
                     key={job.id}
-                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-100 bg-gray-50 p-4"
+                    className="rounded-xl border border-gray-100 bg-gray-50 p-4"
                   >
-                    <div>
-                      <p className="font-semibold text-gray-900">{job.title}</p>
-                      <p className="text-xs text-gray-600">
-                        {org.org_name} - {org.city || 'Malaysia'}
-                      </p>
-                      <div className="mt-2 flex flex-wrap gap-2 text-xs text-gray-600">
-                        <TagPill label={job.employment_type} />
-                        <TagPill label={job.experience_level} />
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
+                    <JobCard job={job} canEdit={true} />
+                    <div className="mt-4 flex items-center gap-2">
                       <Button variant="outline" size="sm" asChild>
                         <Link to={`/jobs/${job.id}`}>Preview</Link>
                       </Button>
                       <Button variant="primary" size="sm" asChild>
-                        <Link to="/employer/applicants">Applicants</Link>
+                        <Link to={job.slug ? `/employer/applicants/${job.slug}` : `/employer/applicants?jobId=${job.id}`}>Applicants</Link>
                       </Button>
                     </div>
                   </div>

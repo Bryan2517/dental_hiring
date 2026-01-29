@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { DashboardShell } from '../../layouts/DashboardShell';
 import { Stepper } from '../../components/Stepper';
 import { Input } from '../../components/ui/input';
@@ -11,7 +11,25 @@ import { Toast } from '../../components/ui/toast';
 import { Breadcrumbs } from '../../components/Breadcrumbs';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
+import { getJobBySlug } from '../../lib/api/jobs';
+import { getJobIdFromSlug } from '../../lib/utils';
+
 import { getUsersOrganizations } from '../../lib/api/organizations';
+import { useEmployerPoints } from '../../contexts/EmployerPointsContext';
+
+function mapEmploymentTypeToDb(type: string): 'full_time' | 'part_time' | 'contract' | 'temporary' | 'internship' {
+  const map: Record<string, string> = {
+    'Full-time': 'full_time',
+    'Part-time': 'part_time',
+    'Locum': 'contract', // Assuming Locum maps to contract or temporary based on DB enum. Let's check DB types if possible. 
+    // Checking types.ts or previous context: DB enum is full_time, part_time, internship, contract, temporary.
+    // So Locum -> contract is reasonable fallback or temporary.
+    'Contract': 'contract',
+    'Internship': 'internship',
+    'Temporary': 'temporary'
+  };
+  return (map[type] || 'full_time') as any;
+}
 
 const sidebarLinks = [
   { to: '/employer/dashboard', label: 'Overview' },
@@ -34,6 +52,9 @@ export default function PostJob() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
   const [orgId, setOrgId] = useState<string | null>(null);
+  const { points, deductPoints, addPoints } = useEmployerPoints();
+  const { slug } = useParams<{ slug: string }>();
+  const isEditMode = !!slug;
 
   const [form, setForm] = useState({
     roleType: 'Dental Assistant',
@@ -49,7 +70,8 @@ export default function PostJob() {
     schedule: '5-day week, rotating weekends',
     benefits: 'Medical coverage, CPD allowance, Annual bonus',
     requirements: '',
-    preferredExperience: ''
+    preferredExperience: '',
+    employmentType: 'Full-time'
   });
 
   useEffect(() => {
@@ -67,7 +89,7 @@ export default function PostJob() {
       const storedOrgId = localStorage.getItem('activeOrgId');
       const activeOrg = orgs.find(o => o.id === storedOrgId) || orgs[0];
 
-      if (activeOrg) {
+      if (activeOrg && !isEditMode) {
         setOrgId(activeOrg.id);
         setForm(f => ({
           ...f,
@@ -78,7 +100,61 @@ export default function PostJob() {
       }
     }
     fetchOrg();
-  }, [user, navigate]);
+  }, [user, navigate, isEditMode]);
+
+  // Load existing data if edit mode
+  useEffect(() => {
+    if (!slug) return;
+
+    async function loadJob() {
+      // Resolve ID first (legacy or slug)
+      // Actually we can just fetch by slug using getJobBySlug
+      try {
+        const job = await getJobBySlug(slug);
+        if (job) {
+          setOrgId(job.orgId);
+          setForm({
+            roleType: job.roleType,
+            clinicName: job.clinicName,
+            city: job.city,
+            country: job.country,
+            specialtyTags: job.specialtyTags.join(', '),
+            experienceLevel: job.experienceLevel,
+            newGradWelcome: job.newGradWelcome,
+            trainingProvided: job.trainingProvided,
+            salaryMin: job.salaryRange.replace(/[^0-9-]/g, '').split('-')[0] || '',
+            salaryMax: job.salaryRange.replace(/[^0-9-]/g, '').split('-')[1] || '',
+            schedule: '', // Schedule isn't a direct field in Job type returned by API, might serve from description
+            benefits: job.benefits.join(', '),
+            requirements: job.requirements.join('\n'), // Since we store as array
+            preferredExperience: '', // Also not explicit in Job type
+            employmentType: job.employmentType || 'Full-time'
+          });
+          // TODO: Need to parse description back into requirements/schedule/preferred if possible
+          // For now, simple load.
+
+          // If we really want to support full edit, we should probably fetch raw row or improve Job type.
+          // But let's do best effort mapping.
+
+          // Extract schedule from description if possible?
+          // job.description format: `Requirements:\n...\n\nPreferred Experience:\n...\n\nSchedule:\n...`
+
+          const desc = job.description;
+          // Naive parsing
+          const reqMatch = desc.match(/Requirements:\n([\s\S]*?)\n\nPreferred Experience:/);
+          const expMatch = desc.match(/Preferred Experience:\n([\s\S]*?)\n\nSchedule:/);
+          const schedMatch = desc.match(/Schedule:\n([\s\S]*)/);
+
+          if (reqMatch) setForm(f => ({ ...f, requirements: reqMatch[1] }));
+          if (expMatch) setForm(f => ({ ...f, preferredExperience: expMatch[1] }));
+          if (schedMatch) setForm(f => ({ ...f, schedule: schedMatch[1] }));
+        }
+      } catch (err) {
+        console.error("Error loading job for edit", err);
+      }
+    }
+    loadJob();
+  }, [slug]);
 
   const next = () => setActiveStep((s) => Math.min(s + 1, steps.length - 1));
   const prev = () => setActiveStep((s) => Math.max(s - 1, 0));
@@ -88,7 +164,29 @@ export default function PostJob() {
       alert("Organization profile missing. Please contact support.");
       return;
     }
+
+    // Check points
+    const JOB_COST = 20;
+    // Only check points if creating new published job
+    if (!isEditMode && status === 'published' && points < JOB_COST) {
+      alert(`Insufficient credits. You need ${JOB_COST} credits to post a job. Current balance: ${points}`);
+      return;
+    }
+
+
     setIsSubmitting(true);
+
+    // Deduct points optimistically or hold them
+    // Deduct points optimistically or hold them (ONLY for new published jobs)
+    if (!isEditMode && status === 'published') {
+      const info = deductPoints(JOB_COST);
+      if (!info) {
+        // Should have been caught by check above, but double check
+        alert("Insufficient credits.");
+        setIsSubmitting(false);
+        return;
+      }
+    }
 
     try {
       // Parse salary range roughly
@@ -112,11 +210,11 @@ export default function PostJob() {
       // Default to 'other' if not found.
       const dbRoleType = roleTypeMap[form.roleType] || 'other';
 
-      const { error } = await supabase.from('jobs').insert({
+      const payload = {
         org_id: orgId,
         title: form.roleType, // Using role as title for now
         role_type: dbRoleType as any,
-        employment_type: 'full_time', // TODO: map from form employment type
+        employment_type: mapEmploymentTypeToDb(form.employmentType),
         experience_level: form.experienceLevel.toLowerCase() as any,
         // special tags split by comma
         specialty_tags: form.specialtyTags.split(',').map(s => s.trim()).filter(Boolean),
@@ -130,12 +228,59 @@ export default function PostJob() {
         training_provided: form.trainingProvided,
         status: status,
         city: form.city,
-        country: form.country
-      });
+        country: form.country,
+        updated_at: new Date().toISOString()
+      };
+
+      let error;
+
+      if (isEditMode && slug) {
+        // Update existing
+        // We need the ID. Slug might be enough if unique, but let's confirm.
+        // Since we trust slug is unique or we can parse ID from it.
+        // Let's resolve ID first ideally.
+        // BUT if we just use slug logic:
+        // If slug is clean, we can query by slug. If slug has ID, we extract ID.
+
+        const jobId = getJobIdFromSlug(slug);
+
+        if (jobId.match(/^[0-9a-f]{8}-/)) {
+          // Update by UUID
+          const { org_id, ...updatePayload } = payload;
+          const { error: updateError, data: updateData } = await supabase.from('jobs').update(updatePayload).eq('id', jobId).select();
+          error = updateError;
+          if (!error && (!updateData || updateData.length === 0)) {
+            error = { message: "Update failed: Job not found or permission denied." } as any;
+          }
+        } else {
+          // Update by slug column
+          const { org_id, ...updatePayload } = payload;
+          const { error: updateError, data: updateData } = await supabase.from('jobs').update(updatePayload).eq('slug', slug).select();
+          error = updateError;
+          if (!error && (!updateData || updateData.length === 0)) {
+            error = { message: "Update failed: Job not found or permission denied." } as any;
+          }
+        }
+      } else {
+        // Create New - use first 8 chars of a generated UUID for consistent slug format
+        const roleSlug = form.roleType.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+        // Generate a UUID-like ID prefix for the slug (will be replaced with actual ID after insert)
+        const tempId = crypto.randomUUID().substring(0, 8);
+        const newSlug = `${roleSlug}-${tempId}`;
+
+        const { error: insertError } = await supabase.from('jobs').insert({
+          ...payload,
+          slug: newSlug
+        });
+        error = insertError;
+      }
 
       if (error) {
         console.error(error);
         alert(`Error ${status === 'published' ? 'publishing' : 'saving'}: ` + error.message);
+        // Refund if specific error and was published
+        // Refund if specific error and was published AND it was a new job
+        if (!isEditMode && status === 'published') addPoints(JOB_COST);
       } else {
         setShowToast(true);
         setTimeout(() => navigate('/employer/dashboard'), 1500);
@@ -152,8 +297,8 @@ export default function PostJob() {
   return (
     <DashboardShell
       sidebarLinks={sidebarLinks}
-      title="Post a Job"
-      subtitle="Fill in the details to find your next great hire."
+      title={isEditMode ? "Edit Job" : "Post a Job"}
+      subtitle={isEditMode ? "Update your job posting details." : "Fill in the details to find your next great hire."}
       hideNavigation
     >
       <Breadcrumbs items={[{ label: 'Employer Home', to: '/employers' }, { label: 'Post Job' }]} />
@@ -166,6 +311,7 @@ export default function PostJob() {
               label="Role title"
               value={form.roleType}
               onChange={(e) => setForm({ ...form, roleType: e.target.value })}
+              disabled={isEditMode}
             >
               <option>Dental Assistant</option>
               <option>Dentist (GP)</option>
@@ -200,7 +346,11 @@ export default function PostJob() {
               <option>Mid</option>
               <option>Senior</option>
             </Select>
-            <Select label="Employment type" defaultValue="Full-time">
+            <Select
+              label="Employment type"
+              value={form.employmentType}
+              onChange={(e) => setForm({ ...form, employmentType: e.target.value })}
+            >
               <option>Full-time</option>
               <option>Part-time</option>
               <option>Locum</option>
@@ -303,21 +453,18 @@ export default function PostJob() {
             )}
             {activeStep === steps.length - 1 && (
               <Button variant="primary" onClick={() => insertJob('published')} disabled={isSubmitting}>
-                {isSubmitting ? 'Publishing...' : 'Publish'}
+                {isSubmitting ? 'Publishing...' : isEditMode ? 'Save Changes' : 'Publish (-20 credits)'}
               </Button>
             )}
           </div>
-          <Button variant="ghost" onClick={() => insertJob('draft')} disabled={isSubmitting}>
-            {isSubmitting ? 'Saving...' : 'Save draft'}
-          </Button>
         </div>
       </div>
 
       <Toast
         open={showToast}
         onClose={() => setShowToast(false)}
-        title="Job published"
-        description="Redirecting to dashboard..."
+        title={isEditMode ? "Job updated" : "Job published"}
+        description={isEditMode ? "Your changes have been saved." : "Redirecting to dashboard..."}
       />
     </DashboardShell>
   );

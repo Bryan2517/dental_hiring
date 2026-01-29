@@ -1,6 +1,7 @@
 import { supabase } from '../supabase';
 import type { Database } from '../database.types';
 import type { Job } from '../types';
+import { getJobIdFromSlug } from '../utils';
 
 type JobRow = Database['public']['Tables']['jobs']['Row'];
 type OrganizationRow = Database['public']['Tables']['organizations']['Row'];
@@ -59,6 +60,7 @@ function mapJobToFrontend(job: JobRow, org: OrganizationRow | null): Job {
     salaryMax: job.salary_max || undefined,
     orgId: job.org_id,
     logoUrl: org?.logo_url || undefined,
+    slug: job.slug || undefined,
   };
 }
 
@@ -196,6 +198,51 @@ export async function getJobById(id: string): Promise<Job | null> {
   return mapJobToFrontend(data, org);
 }
 
+export async function getJobBySlug(slug: string): Promise<Job | null> {
+  const selectQuery = `
+      *,
+      organizations (
+        id,
+        org_name,
+        city,
+        country,
+        logo_url
+      )
+    `;
+
+  // 1. Try finding by exact slug match
+  const { data: slugData } = await supabase
+    .from('jobs')
+    .select(selectQuery)
+    .eq('slug', slug)
+    .single();
+
+  if (slugData) {
+    const org = Array.isArray((slugData as any).organizations) ? (slugData as any).organizations[0] : (slugData as any).organizations;
+    return mapJobToFrontend(slugData, org);
+  }
+
+  // 2. If not found, try extracting ID (for legacy URLs or un-slugged jobs)
+  // Check if the input looks like a UUID or contains one at the end
+  const potentialId = getJobIdFromSlug(slug);
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  if (uuidRegex.test(potentialId)) {
+    const { data: idData, error } = await supabase
+      .from('jobs')
+      .select(selectQuery)
+      .eq('id', potentialId)
+      .single();
+
+    if (idData) {
+      const org = Array.isArray((idData as any).organizations) ? (idData as any).organizations[0] : (idData as any).organizations;
+      return mapJobToFrontend(idData, org);
+    }
+  }
+
+  return null;
+}
+
 export async function createJob(jobData: {
   org_id: string;
   title: string;
@@ -217,6 +264,7 @@ export async function createJob(jobData: {
   training_provided?: boolean;
   internship_available?: boolean;
   status?: Database['public']['Enums']['job_status'];
+  slug: string;
 }): Promise<Job> {
   const { data, error } = await supabase
     .from('jobs')
