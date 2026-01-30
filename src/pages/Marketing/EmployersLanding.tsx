@@ -215,7 +215,7 @@ export default function EmployersLanding() {
             <p className="text-sm font-semibold text-brand">Candidate previews</p>
             <h2 className="text-2xl font-bold text-gray-900">Top matches ready today</h2>
           </div>
-          <Button variant="primary" size="sm" asChild>
+          <Button variant="primary" size="sm" asChild className="hover:text-white">
             <Link to="/employer/applicants">View all</Link>
           </Button>
         </div>

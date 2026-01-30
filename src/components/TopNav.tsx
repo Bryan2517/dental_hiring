@@ -114,7 +114,7 @@ export function TopNav() {
           </nav>
 
           <div className="flex items-center gap-3">
-            {activeRole === 'employer' && (
+            {activeRole === 'employer' && user && userRole === 'employer' && (
               <div className="hidden md:flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-200">
                 <span className="text-sm font-medium text-gray-600">
                   <span className="text-brand font-bold">{points}</span> pts

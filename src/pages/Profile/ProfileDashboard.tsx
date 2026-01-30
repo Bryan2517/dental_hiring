@@ -172,7 +172,7 @@ export default function ProfileDashboard() {
         // 1. Fetch Profile Data (profiles + seeker_profiles)
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
-          .select('full_name, seeker_profiles(school_name, expected_graduation_date, clinical_exposures, seeker_type)')
+          .select('full_name, avatar_url, seeker_profiles(school_name, expected_graduation_date, clinical_exposures, seeker_type)')
           .eq('id', user!.id)
           .single();
 

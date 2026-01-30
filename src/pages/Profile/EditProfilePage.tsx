@@ -464,7 +464,7 @@ export default function EditProfilePage() {
                                             onClick={() => fileInputRef.current?.click()}
                                             icon={!isAnalyzing ? <ScanText className="h-4 w-4" /> : undefined}
                                         >
-                                            {isAnalyzing ? 'Analyzing...' : 'Auto-fill'}
+                                            {isAnalyzing ? 'Analyzing...' : 'Auto-fill from Resume'}
                                         </Button>
                                     </div>
                                 </div>
