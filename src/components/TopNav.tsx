@@ -36,7 +36,8 @@ export function TopNav() {
 
   useEffect(() => {
     async function fetchOrgName() {
-      if (activeRole === 'employer' && user?.id) {
+      // Only fetch org name if we are really an employer
+      if (activeRole === 'employer' && user?.id && userRole === 'employer') {
         try {
           const orgs = await getUsersOrganizations(user.id);
           // Currently assuming single org per user or taking the first one
@@ -51,7 +52,7 @@ export function TopNav() {
       }
     }
     fetchOrgName();
-  }, [activeRole, user?.id]);
+  }, [activeRole, user?.id, userRole]);
 
   const navLinks = useMemo(() => {
     if (activeRole === 'employer') {
