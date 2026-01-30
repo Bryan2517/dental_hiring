@@ -64,6 +64,7 @@ export default function EditProfilePage() {
     // Avatar upload
     const avatarInputRef = useRef<HTMLInputElement>(null);
     const [avatarUploading, setAvatarUploading] = useState(false);
+    const [avatarFile, setAvatarFile] = useState<File | null>(null);
 
     // Resume upload & analysis
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -109,7 +110,7 @@ export default function EditProfilePage() {
                     .from('seeker_documents')
                     .select('*')
                     .eq('user_id', user.id)
-                    .order('uploaded_at', { ascending: false });
+                    .order('created_at', { ascending: false });
 
                 if (profileData) {
                     setProfileFields(prev => ({
@@ -163,48 +164,45 @@ export default function EditProfilePage() {
         );
     };
 
-    const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleAvatarUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
-        if (!file || !user) return;
+        if (!file) return;
 
-        setAvatarUploading(true);
-        try {
-            const fileExt = file.name.split('.').pop();
-            const filePath = `${user.id}/avatar.${fileExt}`;
-
-            const { error: uploadError } = await supabase.storage
-                .from('avatars')
-                .upload(filePath, file, { upsert: true });
-
-            if (uploadError) throw uploadError;
-
-            const { data: { publicUrl } } = supabase.storage
-                .from('avatars')
-                .getPublicUrl(filePath);
-
-            const urlWithTimestamp = `${publicUrl}?t=${Date.now()}`;
-
-            await supabase
-                .from('profiles')
-                .update({ avatar_url: urlWithTimestamp })
-                .eq('id', user.id);
-
-            setProfileFields(prev => ({ ...prev, avatarUrl: urlWithTimestamp }));
-        } catch (err) {
-            console.error('Avatar upload error:', err);
-            alert('Failed to upload avatar.');
-        } finally {
-            setAvatarUploading(false);
-        }
+        setAvatarFile(file);
+        const previewUrl = URL.createObjectURL(file);
+        setProfileFields(prev => ({ ...prev, avatarUrl: previewUrl }));
     };
 
     const handleSaveProfile = async () => {
         if (!user) return;
         setSaving(true);
         try {
+            let currentAvatarUrl = profileFields.avatarUrl;
+
+            // Handle pending avatar upload
+            if (avatarFile) {
+                const fileExt = avatarFile.name.split('.').pop();
+                const filePath = `${user.id}/avatar.${fileExt}`;
+
+                const { error: uploadError } = await supabase.storage
+                    .from('avatars')
+                    .upload(filePath, avatarFile, { upsert: true });
+
+                if (uploadError) throw uploadError;
+
+                const { data: { publicUrl } } = supabase.storage
+                    .from('avatars')
+                    .getPublicUrl(filePath);
+
+                currentAvatarUrl = `${publicUrl}?t=${Date.now()}`;
+            }
+
             const { error: profileError } = await supabase
                 .from('profiles')
-                .update({ full_name: profileFields.fullName })
+                .update({
+                    full_name: profileFields.fullName,
+                    avatar_url: currentAvatarUrl
+                })
                 .eq('id', user.id);
 
             if (profileError) throw profileError;
@@ -227,7 +225,7 @@ export default function EditProfilePage() {
             // Navigate back after short delay
             setTimeout(() => navigate('/seekers/dashboard'), 1500);
         } catch (err) {
-            console.error('Error saving profile:', err);
+            console.error('Error saving profile:', JSON.stringify(err, null, 2));
             alert('Failed to save profile.');
         } finally {
             setSaving(false);
@@ -267,7 +265,7 @@ export default function EditProfilePage() {
                 .from('seeker_documents')
                 .select('*')
                 .eq('user_id', user.id)
-                .order('uploaded_at', { ascending: false });
+                .order('created_at', { ascending: false });
 
             if (resumeData && resumeData.length > 0) {
                 const mappedResumes = resumeData.map(r => ({
@@ -399,7 +397,7 @@ export default function EditProfilePage() {
                                     disabled={avatarUploading}
                                 />
                             </div>
-                            {avatarUploading && <p className="text-xs text-gray-500 mt-2">Uploading...</p>}
+
                         </div>
 
                         {/* Basic Info Fields */}
