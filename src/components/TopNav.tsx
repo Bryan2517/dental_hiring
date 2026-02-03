@@ -73,8 +73,8 @@ export function TopNav() {
       return [
         { to: '/admin', label: 'Overview', icon: <LayoutDashboard className="h-4 w-4" />, end: true },
         { to: '/jobs', label: 'Job Board', icon: <Briefcase className="h-4 w-4" /> },
-        // Keeping the link as requested, though it might need adjustment if /employer/dashboard is employer-only
-        { to: '/admin/organizations', label: 'Organizations', icon: <Building2Icon className="h-4 w-4" /> }
+        { to: '/admin/organizations', label: 'Organizations', icon: <Building2Icon className="h-4 w-4" /> },
+        { to: '/admin/profile', label: 'Profile', icon: <User2 className="h-4 w-4" /> }
       ];
     }
     return [
@@ -157,7 +157,9 @@ export function TopNav() {
               <button
                 className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-gray-100 text-sm font-bold text-gray-600 shadow-sm transition-opacity hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-brand/20"
                 onClick={() => {
-                  if (activeRole === 'employer') {
+                  if (activeRole === 'admin') {
+                    navigate('/admin/profile');
+                  } else if (activeRole === 'employer') {
                     navigate('/employer/profile');
                   } else if (activeRole === 'seeker') {
                     navigate('/seekers/dashboard/edit');

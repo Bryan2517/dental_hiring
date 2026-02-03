@@ -10,6 +10,7 @@ import PostJob from './pages/Employer/PostJob';
 import ApplicantsPipeline from './pages/Employer/ApplicantsPipeline';
 import AdminDashboard from './pages/Admin/AdminDashboard';
 import OrganizationsList from './pages/Admin/OrganizationsList';
+import AdminProfile from './pages/Admin/AdminProfile';
 import About from './pages/Marketing/About';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AuthModal } from './components/AuthModal';
@@ -126,6 +127,14 @@ function App() {
           element={
             <ProtectedRoute requiredRole="admin">
               <OrganizationsList />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/profile"
+          element={
+            <ProtectedRoute requiredRole="admin">
+              <AdminProfile />
             </ProtectedRoute>
           }
         />
