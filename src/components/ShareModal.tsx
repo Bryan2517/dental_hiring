@@ -58,18 +58,18 @@ export function ShareModal({ open, onClose, url, title }: ShareModalProps) {
                     <div className="grid grid-cols-2 gap-3">
                         <Button
                             variant="outline"
-                            className="flex items-center justify-center gap-2 h-12 hover:bg-[#25D366]/10 hover:text-[#25D366] hover:border-[#25D366]"
+                            className="h-12 hover:bg-[#25D366]/10 hover:text-[#25D366] hover:border-[#25D366]"
                             onClick={shareToWhatsApp}
+                            icon={<MessageCircle className="h-5 w-5" />}
                         >
-                            <MessageCircle className="h-5 w-5" />
                             WhatsApp
                         </Button>
                         <Button
                             variant="outline"
-                            className="flex items-center justify-center gap-2 h-12 hover:bg-brand/10 hover:text-brand hover:border-brand"
+                            className="h-12 hover:bg-brand/10 hover:text-brand hover:border-brand"
                             onClick={shareToEmail}
+                            icon={<Mail className="h-5 w-5" />}
                         >
-                            <Mail className="h-5 w-5" />
                             Email
                         </Button>
                     </div>
