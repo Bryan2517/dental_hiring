@@ -36,9 +36,14 @@ export function CandidateDrawer({ candidate, open, onClose, onMove, orgId }: Can
       if (candidate?.resumePath) {
         setLoadingResume(true);
         try {
+          // Extract relative path if it's a full URL
+          const path = candidate.resumePath.includes('/resumes/')
+            ? candidate.resumePath.split('/resumes/')[1]
+            : candidate.resumePath;
+
           const { data, error } = await supabase.storage
             .from('resumes')
-            .createSignedUrl(candidate.resumePath, 3600); // 1 hour expiry
+            .createSignedUrl(path, 3600); // 1 hour expiry
 
           if (error) throw error;
           setResumeUrl(data.signedUrl);

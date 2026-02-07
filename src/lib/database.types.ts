@@ -607,37 +607,59 @@ export type Database = {
       }
       profiles: {
         Row: {
-          avatar_url: string | null
-          city: string | null
-          country: string | null
-          created_at: string
-          email: string | null
-          full_name: string | null
-          id: string
+          user_id: string
+          email: string
+          name: string | null
+          account_type: 'individual' | 'company' | 'admin' | null
           phone: string | null
+          position: string | null
+          company_name: string | null
+          created_at: string
           updated_at: string
+          avatar_url: string | null
+          background_url: string | null
+          clinic_id: string | null
+          status: string | null
         }
         Insert: {
-          avatar_url?: string | null
-          city?: string | null
-          country?: string | null
-          created_at?: string
-          full_name?: string | null
-          id: string
+          user_id: string
+          email: string
+          name?: string | null
+          account_type?: 'individual' | 'company' | 'admin' | null
           phone?: string | null
+          position?: string | null
+          company_name?: string | null
+          created_at?: string
           updated_at?: string
+          avatar_url?: string | null
+          background_url?: string | null
+          clinic_id?: string | null
+          status?: string | null
         }
         Update: {
-          avatar_url?: string | null
-          city?: string | null
-          country?: string | null
-          created_at?: string
-          full_name?: string | null
-          id?: string
+          user_id?: string
+          email?: string
+          name?: string | null
+          account_type?: 'individual' | 'company' | 'admin' | null
           phone?: string | null
+          position?: string | null
+          company_name?: string | null
+          created_at?: string
           updated_at?: string
+          avatar_url?: string | null
+          background_url?: string | null
+          clinic_id?: string | null
+          status?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       seeker_documents: {
         Row: {

@@ -77,7 +77,7 @@ export default function EmployerDashboard() {
             .from('applications')
             .select(`
               id, status, created_at,
-              seeker:profiles!seeker_user_id(full_name, seeker_profiles(school_name)),
+              seeker:profiles!seeker_user_id(name, seeker_profiles(school_name)),
               job:jobs(title)
             `)
             .eq('org_id', activeOrg.id)
@@ -89,7 +89,7 @@ export default function EmployerDashboard() {
             const formattedApps = (appsData || []).map((app: any) => ({
               id: app.id,
               status: app.status,
-              name: app.seeker?.full_name || 'Unknown',
+              name: app.seeker?.name || 'Unknown',
               school: app.seeker?.seeker_profiles?.school_name || 'Unknown School',
               jobTitle: app.job?.title || 'Unknown Job',
               created_at: app.created_at
@@ -105,7 +105,7 @@ export default function EmployerDashboard() {
     }
 
     fetchEmployerData();
-  }, [user]);
+  }, [user?.id]);
 
   const handleOrgSwitch = (orgId: string) => {
     localStorage.setItem('activeOrgId', orgId);
@@ -183,7 +183,7 @@ export default function EmployerDashboard() {
         </Button>
       }
     >
-      <Breadcrumbs items={[{ label: 'Employer Home', to: '/employers' }, { label: 'Dashboard' }]} />
+      {/* <Breadcrumbs items={[{ label: 'Employer Home', to: '/employers' }, { label: 'Dashboard' }]} /> */}
 
       {/* Org Switcher / Header */}
       <div className="flex items-center justify-between mb-6">

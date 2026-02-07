@@ -1,34 +1,23 @@
-
-export interface ExtractedProfile {
-    fullName?: string;
-    headline?: string;
-    bio?: string;
-    location?: string;
-    email?: string;
-    phone?: string;
-    skills?: string[];
-    experienceYears?: number;
-}
-
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Education, WorkExperience } from "../types";
 
 export interface ExtractedProfile {
-    fullName?: string;
-    headline?: string;
-    bio?: string;
-    location?: string;
-    email?: string;
-    phone?: string;
-    skills?: string[];
-    experienceYears?: number;
-    school?: string;
-    education?: Omit<Education, 'id'>[];
-    workExperience?: Omit<WorkExperience, 'id'>[];
+  fullName?: string;
+  headline?: string;
+  bio?: string;
+  location?: string;
+  email?: string;
+  phone?: string;
+  skills?: string[];
+  experienceYears?: number;
+  school?: string;
+  graduationDate?: string;
+  education?: Omit<Education, 'id'>[];
+  workExperience?: Omit<WorkExperience, 'id'>[];
 }
 
 export async function parseResumeWithGemini(text: string, apiKey: string): Promise<ExtractedProfile> {
-    const prompt = `
+  const prompt = `
     You are a resume parser. Extract the following information from the resume text below and return it as a valid JSON object.
     Do not include markdown formatting (like \`\`\`json). Just return the raw JSON.
     
@@ -42,6 +31,7 @@ export async function parseResumeWithGemini(text: string, apiKey: string): Promi
     - skills (array of strings)
     - experienceYears (number: Total years of experience based on work history)
     - school (string: Name of the university or dental school attended)
+    - graduationDate (string: Expected or actual graduation date in YYYY-MM format)
     - education (array of objects):
       - institutionName (string)
       - degree (string)
@@ -63,25 +53,25 @@ export async function parseResumeWithGemini(text: string, apiKey: string): Promi
     ${text}
   `;
 
-    try {
-        const genAI = new GoogleGenerativeAI(apiKey);
-        // Use gemini-flash-latest which usually has better free tier limits
-        const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+  try {
+    const genAI = new GoogleGenerativeAI(apiKey);
+    // Use gemini-flash-latest which usually has better free tier limits
+    const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
 
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const content = response.text();
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const content = response.text();
 
-        if (!content) {
-            throw new Error('No content generated from Gemini');
-        }
-
-        // Clean up potential markdown code blocks
-        const jsonString = content.replace(/```json/g, '').replace(/```/g, '').trim();
-
-        return JSON.parse(jsonString);
-    } catch (error) {
-        console.error('Error parsing resume with Gemini:', error);
-        throw error;
+    if (!content) {
+      throw new Error('No content generated from Gemini');
     }
+
+    // Clean up potential markdown code blocks
+    const jsonString = content.replace(/```json/g, '').replace(/```/g, '').trim();
+
+    return JSON.parse(jsonString);
+  } catch (error) {
+    console.error('Error parsing resume with Gemini:', error);
+    throw error;
+  }
 }

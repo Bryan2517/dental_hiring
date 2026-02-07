@@ -95,7 +95,7 @@ export default function JobDetails() {
       }
     }
     loadJob();
-  }, [id, user, userRole]);
+  }, [id, user?.id, userRole]);
 
   useEffect(() => {
     async function loadResumes() {
@@ -109,7 +109,7 @@ export default function JobDetails() {
       }
     }
     loadResumes();
-  }, [user, userRole]);
+  }, [user?.id, userRole]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0 });
@@ -170,7 +170,7 @@ export default function JobDetails() {
   return (
     <AppShell padded background="muted">
       <div className="mb-3 flex items-center justify-between">
-        <Breadcrumbs items={[{ label: 'Home', to: '/seekers' }, { label: 'Jobs', to: '/jobs' }, { label: job.roleType }]} />
+        {/* <Breadcrumbs items={[{ label: 'Home', to: '/seekers' }, { label: 'Jobs', to: '/jobs' }, { label: job.roleType }]} /> */}
         <Link to="/jobs" className="text-xs font-semibold text-brand hover:text-brand-hover">
           Back to jobs
         </Link>

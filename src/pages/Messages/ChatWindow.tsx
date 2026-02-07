@@ -4,6 +4,8 @@ import { useChat } from '../../contexts/ChatContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { Send, ArrowLeft, MoreVertical, Phone, Video, Paperclip, X, FileText, Download, Trash2, Copy, Reply, MoreHorizontal } from 'lucide-react';
 import { Button } from '../../components/ui/button';
+import { Toast } from '../../components/ui/toast';
+import { Modal } from '../../components/ui/modal';
 import { format } from 'date-fns';
 import { cn } from '../../lib/utils'; // Keep importing cn for conditional classes if used
 
@@ -15,6 +17,9 @@ export default function ChatWindow() {
     const [attachedFile, setAttachedFile] = useState<File | null>(null);
     const [activeMenu, setActiveMenu] = useState<string | null>(null);
     const [replyingTo, setReplyingTo] = useState<{ id: string; content: string; senderName: string } | null>(null);
+    const [showToast, setShowToast] = useState(false);
+    const [toastContent, setToastContent] = useState({ title: '', description: '' });
+    const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
     const messagesContainerRef = useRef<HTMLDivElement>(null);
 
     const scrollToBottom = () => {
@@ -36,7 +41,7 @@ export default function ChatWindow() {
         );
     }
 
-    const otherPartyName = userRole === 'seeker' ? activeConversation.organization?.org_name : activeConversation.seeker?.full_name;
+    const otherPartyName = userRole === 'seeker' ? activeConversation.organization?.org_name : activeConversation.seeker?.name;
     const otherPartyAvatar = userRole === 'seeker' ? activeConversation.organization?.logo_url : activeConversation.seeker?.avatar_url;
 
 
@@ -50,7 +55,12 @@ export default function ChatWindow() {
         e?.preventDefault();
         if (!newMessage.trim() && !attachedFile) return;
 
-        await sendMessage(newMessage, attachedFile || undefined);
+        let contentToSend = newMessage;
+        if (replyingTo) {
+            contentToSend = `Replying to ${replyingTo.senderName}: "${replyingTo.content.substring(0, 50)}${replyingTo.content.length > 50 ? '...' : ''}"\n\n${newMessage}`;
+        }
+
+        await sendMessage(contentToSend, attachedFile || undefined);
         setNewMessage('');
         setAttachedFile(null);
         setReplyingTo(null);
@@ -74,9 +84,17 @@ export default function ChatWindow() {
         setActiveMenu(null);
     };
 
-    const handleDeleteMessage = async (messageId: string) => {
-        await deleteMessage(messageId);
+    const handleDeleteClick = (messageId: string) => {
         setActiveMenu(null);
+        setMessageToDelete(messageId);
+    };
+
+    const confirmDelete = async () => {
+        if (!messageToDelete) return;
+        await deleteMessage(messageToDelete);
+        setMessageToDelete(null);
+        setToastContent({ title: 'Message Deleted', description: 'The message has been removed.' });
+        setShowToast(true);
     };
 
     return (
@@ -163,12 +181,38 @@ export default function ChatWindow() {
                                                         : "bg-white text-gray-900 rounded-bl-none"
                                                 )}
                                             >
-                                                <div className="flex flex-wrap items-end gap-x-2">
-                                                    <span>{msg.content}</span>
-
-                                                    <span className={cn("text-xs leading-none mb-0.5", isMe ? "text-white/70" : "text-gray-400")}>
-                                                        {format(new Date(msg.createdAt), 'HH:mm')}
-                                                    </span>
+                                                <div className="flex flex-col gap-1">
+                                                    {(() => {
+                                                        const replyMatch = msg.content.match(/^Replying to (.*?): "(.*?)"\n\n([\s\S]*)$/);
+                                                        if (replyMatch) {
+                                                            const [, replySender, replyContent, realMessage] = replyMatch;
+                                                            return (
+                                                                <>
+                                                                    <div className={cn(
+                                                                        "mb-1 rounded-md border-l-4 bg-black/5 p-2 text-sm",
+                                                                        isMe ? "border-white/50 bg-black/10 text-white/90" : "border-brand bg-gray-50 text-gray-600"
+                                                                    )}>
+                                                                        <p className="font-bold text-xs mb-0.5">{replySender}</p>
+                                                                        <p className="line-clamp-2 italic opacity-90">{replyContent}</p>
+                                                                    </div>
+                                                                    <div className="flex flex-wrap items-end gap-x-2">
+                                                                        <span>{realMessage}</span>
+                                                                        <span className={cn("text-xs leading-none mb-0.5", isMe ? "text-white/70" : "text-gray-400")}>
+                                                                            {format(new Date(msg.createdAt), 'HH:mm')}
+                                                                        </span>
+                                                                    </div>
+                                                                </>
+                                                            );
+                                                        }
+                                                        return (
+                                                            <div className="flex flex-wrap items-end gap-x-2">
+                                                                <span>{msg.content}</span>
+                                                                <span className={cn("text-xs leading-none mb-0.5", isMe ? "text-white/70" : "text-gray-400")}>
+                                                                    {format(new Date(msg.createdAt), 'HH:mm')}
+                                                                </span>
+                                                            </div>
+                                                        );
+                                                    })()}
                                                 </div>
                                                 {msg.attachmentUrl && (
                                                     <a
@@ -236,7 +280,7 @@ export default function ChatWindow() {
                                                             </button>
                                                             {isMe && (
                                                                 <button
-                                                                    onClick={() => handleDeleteMessage(msg.id)}
+                                                                    onClick={() => handleDeleteClick(msg.id)}
                                                                     className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
                                                                 >
                                                                     <Trash2 className="h-4 w-4" />
@@ -320,6 +364,34 @@ export default function ChatWindow() {
                     </Button>
                 </form>
             </div>
+            {/* Delete Confirmation Modal */}
+            <Modal
+                open={!!messageToDelete}
+                onClose={() => setMessageToDelete(null)}
+                title="Delete Message"
+                maxWidth="max-w-sm"
+            >
+                <div className="space-y-4">
+                    <p className="text-gray-600">Are you sure you want to delete this message? This action cannot be undone.</p>
+                    <div className="flex justify-end gap-3">
+                        <Button variant="outline" onClick={() => setMessageToDelete(null)}>
+                            Cancel
+                        </Button>
+                        <Button variant="destructive" onClick={confirmDelete}>
+                            Delete
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
+
+            {/* Toast Notification */}
+            <Toast
+                open={showToast}
+                onClose={() => setShowToast(false)}
+                title={toastContent.title}
+                description={toastContent.description}
+                variant="success"
+            />
         </div>
     );
 }

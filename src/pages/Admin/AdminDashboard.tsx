@@ -57,7 +57,7 @@ export default function AdminDashboard() {
       subtitle="Moderation queue, reports, and analytics (mock)."
       actions={<Badge variant="info">UI only</Badge>}
     >
-      <Breadcrumbs items={[{ label: 'Admin', to: '/admin' }, { label: 'Overview' }]} />
+      {/* <Breadcrumbs items={[{ label: 'Admin', to: '/admin' }, { label: 'Overview' }]} /> */}
       <div className="grid gap-4 lg:grid-cols-[1.1fr,0.9fr]">
         <Card className="p-5">
           <div className="flex items-center justify-between">

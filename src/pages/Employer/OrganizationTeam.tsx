@@ -81,7 +81,7 @@ export default function OrganizationTeam() {
         }
 
         init();
-    }, [user]);
+    }, [user?.id]);
 
     const handleInvite = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -310,11 +310,11 @@ export default function OrganizationTeam() {
                                 <div key={member.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
                                     <div className="flex items-center gap-3">
                                         <div className="h-10 w-10 rounded-full bg-brand-light flex items-center justify-center text-brand font-bold text-sm">
-                                            {member.profile?.full_name?.charAt(0) || member.invited_email?.charAt(0) || 'U'}
+                                            {member.profile?.name?.charAt(0) || member.invited_email?.charAt(0) || 'U'}
                                         </div>
                                         <div>
                                             <p className="font-medium text-gray-900">
-                                                {member.profile?.full_name || 'Pending User'}
+                                                {member.profile?.name || 'Pending User'}
                                             </p>
                                             <p className="text-xs text-gray-500">
                                                 {member.invited_email || member.profile?.email || 'Email not found'}

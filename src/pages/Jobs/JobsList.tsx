@@ -232,7 +232,7 @@ export default function JobsList() {
     loadData().then(count => {
       setTotalCount(count);
     });
-  }, [user, userRole, filters, page]); // Depend on filters and page to trigger refetch
+  }, [user?.id, userRole, filters, page]); // Depend on filters and page to trigger refetch
 
   // Removed filteredJobs useMemo as filtering is server-side
 
@@ -255,10 +255,10 @@ export default function JobsList() {
   return (
     <AppShell padded background="muted">
       <div className="flex flex-col gap-4">
-        <Breadcrumbs items={[{ label: 'Home', to: '/seekers' }, { label: 'Jobs' }]} />
+        {/* Breadcrumbs and Title removed as per user request */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-sm font-semibold text-brand">Job Board</p>
+
             <h1 className="text-2xl font-bold text-gray-900">Find your next dental role</h1>
             <p className="text-sm text-gray-600">
               {loading ? 'Loading jobs...' : `${totalCount} jobs - filters update instantly`}

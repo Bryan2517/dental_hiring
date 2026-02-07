@@ -17,6 +17,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useChat } from '@/contexts/ChatContext';
 import { supabase } from '../../lib/supabase';
 import { getCandidatesForOrg, updateApplicationStatus, toggleCandidateFavorite } from '../../lib/api/applications';
+import { getUsersOrganizations } from '../../lib/api/organizations';
 
 const sidebarLinks = [
   { to: '/employer/dashboard', label: 'Overview' },
@@ -69,20 +70,25 @@ export default function ApplicantsPipeline() {
       if (!user) return;
       setLoading(true);
       try {
-        // Get Org ID
-        const { data: org, error: orgError } = await supabase
-          .from('organizations')
-          .select('id')
-          .eq('owner_user_id', user.id)
-          .single();
+        // Get User's Organizations (Owned + Member)
+        const orgs = await getUsersOrganizations(user.id);
 
-        if (orgError) throw orgError;
-        if (org) {
-          setOrgId(org.id);
-          // Fetch candidates and jobs in parallel
+        if (!orgs || orgs.length === 0) {
+          // Handle no org case - maybe redirect or show empty state
+          setLoading(false);
+          return;
+        }
+
+        // Determine active org (from localStorage or default to first)
+        const storedOrgId = localStorage.getItem('activeOrgId');
+        const activeOrg = orgs.find(o => o.id === storedOrgId) || orgs[0];
+
+        if (activeOrg) {
+          setOrgId(activeOrg.id);
+          // Fetch candidates and jobs in parallel for the ACTIVE organization
           const [candidatesData, jobsData] = await Promise.all([
-            getCandidatesForOrg(org.id),
-            supabase.from('jobs').select('id, title, slug').eq('org_id', org.id).eq('status', 'published').order('created_at', { ascending: false })
+            getCandidatesForOrg(activeOrg.id),
+            supabase.from('jobs').select('id, title, slug').eq('org_id', activeOrg.id).eq('status', 'published').order('created_at', { ascending: false })
           ]);
 
           setCandidates(candidatesData);
@@ -142,7 +148,7 @@ export default function ApplicantsPipeline() {
       }
     }
     fetchData();
-  }, [user, slug, searchParams]);
+  }, [user?.id, slug, searchParams]);
 
   const handleMove = async (id: string, status: JobStage) => {
     // Optimistic update
@@ -273,7 +279,7 @@ export default function ApplicantsPipeline() {
       hideNavigation
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <Breadcrumbs items={[{ label: 'Employer Home', to: '/employers' }, { label: 'Applicants' }]} />
+        {/* <Breadcrumbs items={[{ label: 'Employer Home', to: '/employers' }, { label: 'Applicants' }]} /> */}
         <div className="flex gap-2">
           <Button variant="secondary" size="sm" onClick={() => setShowShareModal(true)} disabled={!selectedJobId}>
             Invite candidate

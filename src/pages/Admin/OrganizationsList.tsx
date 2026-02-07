@@ -41,7 +41,7 @@ export default function OrganizationsList() {
             title="All Organizations"
             subtitle="Manage and view all registered organizations."
         >
-            <Breadcrumbs items={[{ label: 'Admin', to: '/admin' }, { label: 'Organizations' }]} />
+            {/* <Breadcrumbs items={[{ label: 'Admin', to: '/admin' }, { label: 'Organizations' }]} /> */}
 
             <div className="mt-4 mb-6">
                 <div className="relative">

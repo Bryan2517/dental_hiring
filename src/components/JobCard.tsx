@@ -124,13 +124,8 @@ export function JobCard({ job, onApply, isSaved, onToggleSave, onHide, isHidden,
             />
           </div>
         )}
-        <Badge variant="default" className="text-sm">
-          {job.salaryRange}
-        </Badge>
-        <div className="flex gap-2">
-          {job.newGradWelcome && <Badge variant="info">New grad friendly</Badge>}
-          {job.trainingProvided && <Badge variant="success">Training provided</Badge>}
-        </div>
+
+
       </div>
 
       <div className="space-y-1 mb-4">
@@ -168,21 +163,24 @@ export function JobCard({ job, onApply, isSaved, onToggleSave, onHide, isHidden,
 
       <div className="clear-both"></div>
 
-      <div className="flex flex-wrap gap-2">
-        {job.specialtyTags.slice(0, 4).map((tag) => (
-          <TagPill key={tag} label={tag} />
-        ))}
+      <div className="flex flex-col gap-2 mb-4">
+        <Badge variant="default" className="text-sm w-fit">
+          {job.salaryRange}
+        </Badge>
+        <div className="flex gap-2">
+          {job.newGradWelcome && <Badge variant="info">New grad friendly</Badge>}
+          {job.trainingProvided && <Badge variant="success">Training provided</Badge>}
+        </div>
       </div>
 
-      <div className="flex items-center justify-between gap-3 pt-2">
-        <div className="flex flex-wrap gap-2 text-sm text-gray-600">
-          {job.requirements.slice(0, 2).map((req) => (
-            <span key={req} className="rounded-full bg-gray-100 px-3 py-1">
-              {req}
-            </span>
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <div className="flex flex-wrap gap-2">
+          {job.specialtyTags.slice(0, 4).map((tag) => (
+            <TagPill key={tag} label={tag} />
           ))}
         </div>
-        <div className="flex items-center gap-2">
+
+        <div className="flex items-center gap-2 shrink-0">
           <Button variant="outline" size="sm" asChild>
             <Link to={`/jobs/${createJobSlug(job)}`} onClick={(event) => event.stopPropagation()}>
               Details
@@ -219,6 +217,14 @@ export function JobCard({ job, onApply, isSaved, onToggleSave, onHide, isHidden,
             </Button>
           )}
         </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2 text-sm text-gray-600 pt-2 border-t border-gray-100">
+        {job.requirements.slice(0, 2).map((req) => (
+          <span key={req} className="rounded-full bg-gray-100 px-3 py-1">
+            {req}
+          </span>
+        ))}
       </div>
     </div>
   );

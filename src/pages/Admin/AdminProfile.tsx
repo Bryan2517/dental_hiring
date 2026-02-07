@@ -22,7 +22,7 @@ export default function AdminProfile() {
         navigate('/');
     };
 
-    const [fullName, setFullName] = useState('');
+    const [name, setName] = useState('');
     const [phone, setPhone] = useState('');
     const [email, setEmail] = useState('');
 
@@ -39,7 +39,7 @@ export default function AdminProfile() {
                 const { data, error } = await supabase
                     .from('profiles')
                     .select('*')
-                    .eq('id', user!.id)
+                    .eq('user_id', user!.id)
                     .single();
 
                 if (error && error.code !== 'PGRST116') {
@@ -47,7 +47,7 @@ export default function AdminProfile() {
                 }
 
                 if (data) {
-                    setFullName(data.full_name || '');
+                    setName(data.name || '');
                     setPhone(data.phone || '');
                 }
             } catch (err) {
@@ -66,13 +66,14 @@ export default function AdminProfile() {
 
         try {
             const updates = {
-                id: user.id,
-                full_name: fullName,
+                user_id: user.id,
+                name: name,
                 phone: phone,
+                email: user.email!,
                 updated_at: new Date().toISOString(),
             };
 
-            const { error } = await supabase.from('profiles').upsert(updates);
+            const { error } = await supabase.from('profiles').upsert(updates as any);
             if (error) throw error;
 
             setToastMessage("Profile updated successfully");
@@ -109,7 +110,7 @@ export default function AdminProfile() {
             subtitle="Manage your admin account settings"
             hideNavigation
         >
-            <Breadcrumbs items={[{ label: 'Admin', to: '/admin' }, { label: 'Profile' }]} />
+            {/* <Breadcrumbs items={[{ label: 'Admin', to: '/admin' }, { label: 'Profile' }]} /> */}
 
             <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
                 {/* Profile Header */}
@@ -118,7 +119,7 @@ export default function AdminProfile() {
                         <User2 className="h-8 w-8" />
                     </div>
                     <div>
-                        <h2 className="text-xl font-semibold text-gray-900">{fullName || 'System Admin'}</h2>
+                        <h2 className="text-xl font-semibold text-gray-900">{name || 'System Admin'}</h2>
                         <p className="text-sm text-gray-500">{email}</p>
                     </div>
                 </div>
@@ -136,8 +137,8 @@ export default function AdminProfile() {
                         </div>
                         <Input
                             label="Full Name"
-                            value={fullName}
-                            onChange={(e) => setFullName(e.target.value)}
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
                             placeholder="Your full name"
                         />
                         <Input

@@ -13,7 +13,7 @@ export interface OrganizationMember {
     invited_email: string | null;
     created_at: string;
     profile?: {
-        full_name: string | null;
+        name: string | null;
         email: string | null;
     };
 }
@@ -24,7 +24,7 @@ export async function getOrganizationMembers(orgId: string) {
         .select(`
       *,
       profile:profiles!organization_members_user_id_fkey(
-        full_name,
+        name,
         email
       )
     `)

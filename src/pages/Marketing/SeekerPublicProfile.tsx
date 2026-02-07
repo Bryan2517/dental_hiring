@@ -85,7 +85,7 @@ export default function SeekerPublicProfile() {
 
     const canEdit = user && user.id === id;
 
-    const initials = (profile.full_name || profile.email || '?')
+    const initials = (profile.name || profile.email || '?')
         .charAt(0)
         .toUpperCase();
 
@@ -102,7 +102,7 @@ export default function SeekerPublicProfile() {
                     <div className="px-8 pb-8">
                         <div className="relative -mt-12 mb-4 flex justify-between items-end">
                             <Avatar className="h-28 w-28 border-4 border-white shadow-md">
-                                <AvatarImage src={profile.avatar_url || ''} alt={profile.full_name || ''} />
+                                <AvatarImage src={profile.avatar_url || ''} alt={profile.name || ''} />
                                 <AvatarFallback className="text-2xl bg-gray-100 text-gray-600 font-bold">{initials}</AvatarFallback>
                             </Avatar>
 
@@ -126,7 +126,7 @@ export default function SeekerPublicProfile() {
 
                         <div>
                             <div className="flex flex-col md:flex-row md:items-center gap-2">
-                                <h1 className="text-4xl font-bold text-gray-900">{profile.full_name}</h1>
+                                <h1 className="text-4xl font-bold text-gray-900">{profile.name}</h1>
                                 <Badge variant="info" className="w-fit">{seekerTypeLabel}</Badge>
                             </div>
 
@@ -135,12 +135,7 @@ export default function SeekerPublicProfile() {
                             )}
 
                             <div className="flex flex-wrap items-center gap-5 mt-4 text-base text-gray-500">
-                                {(profile.city || profile.country) && (
-                                    <div className="flex items-center gap-1">
-                                        <MapPin className="h-4 w-4" />
-                                        <span>{[profile.city, profile.country].filter(Boolean).join(', ')}</span>
-                                    </div>
-                                )}
+                                {/* Location removed */}
                                 {seekerProfile?.years_experience !== null && seekerProfile?.years_experience !== undefined && (
                                     <div className="flex items-center gap-1">
                                         <Briefcase className="h-4 w-4" />

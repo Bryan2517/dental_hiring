@@ -67,13 +67,15 @@ export default function EditProfilePage() {
     const [avatarFile, setAvatarFile] = useState<File | null>(null);
 
     // Resume upload & analysis
+    // Resume upload & analysis
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const resumeUploadInputRef = useRef<HTMLInputElement>(null); // New ref for direct upload
     const [resumes, setResumes] = useState<Resume[]>([]);
     const [latestResume, setLatestResume] = useState<Resume | null>(null);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
-    const [showUploadModal, setShowUploadModal] = useState(false);
-    const [uploadFile, setUploadFile] = useState<File | null>(null);
-    const [uploadFileName, setUploadFileName] = useState('');
+    // Removed showUploadModal state
+    // Removed uploadFile state
+    // Removed uploadFileName state
     const [uploading, setUploading] = useState(false);
 
     // API Key Modal for resume analysis
@@ -94,8 +96,8 @@ export default function EditProfilePage() {
                 // Fetch profile
                 const { data: profileData } = await supabase
                     .from('profiles')
-                    .select('full_name, avatar_url')
-                    .eq('id', user.id)
+                    .select('name, avatar_url')
+                    .eq('user_id', user.id)
                     .single();
 
                 // Fetch seeker profile
@@ -115,7 +117,7 @@ export default function EditProfilePage() {
                 if (profileData) {
                     setProfileFields(prev => ({
                         ...prev,
-                        fullName: profileData.full_name || '',
+                        fullName: profileData.name || '',
                         email: user.email || '',
                         avatarUrl: profileData.avatar_url || '',
                     }));
@@ -152,7 +154,7 @@ export default function EditProfilePage() {
             }
         }
         fetchData();
-    }, [user]);
+    }, [user?.id]);
 
     const handleFieldChange = (field: keyof typeof defaultProfileFields, value: string) => {
         setProfileFields(prev => ({ ...prev, [field]: value }));
@@ -200,10 +202,10 @@ export default function EditProfilePage() {
             const { error: profileError } = await supabase
                 .from('profiles')
                 .update({
-                    full_name: profileFields.fullName,
+                    name: profileFields.fullName,
                     avatar_url: currentAvatarUrl
                 })
-                .eq('id', user.id);
+                .eq('user_id', user.id);
 
             if (profileError) throw profileError;
 
@@ -215,7 +217,7 @@ export default function EditProfilePage() {
                     expected_graduation_date: profileFields.graduation ? `${profileFields.graduation}-01` : null,
                     clinical_exposures: selectedExposures,
                     seeker_type: profileFields.seekerType as Database['public']['Enums']['seeker_type']
-                });
+                }, { onConflict: 'user_id' });
 
             if (seekerError) throw seekerError;
 
@@ -232,16 +234,16 @@ export default function EditProfilePage() {
         }
     };
 
-    const handleResumeUpload = async () => {
-        if (!uploadFile || !user) return;
+    const uploadResumeFile = async (file: File) => {
+        if (!user) return false;
         setUploading(true);
         try {
-            const fileExt = uploadFile.name.split('.').pop();
+            const fileExt = file.name.split('.').pop();
             const filePath = `${user.id}/${Date.now()}.${fileExt}`;
 
             const { error: uploadError } = await supabase.storage
                 .from('resumes')
-                .upload(filePath, uploadFile);
+                .upload(filePath, file);
 
             if (uploadError) throw uploadError;
 
@@ -251,14 +253,10 @@ export default function EditProfilePage() {
 
             await supabase.from('seeker_documents').insert({
                 user_id: user.id,
-                title: uploadFile.name,
+                title: file.name,
                 storage_path: publicUrl,
                 doc_type: 'resume' as const,
             });
-
-            setShowUploadModal(false);
-            setUploadFileName('');
-            setUploadFile(null);
 
             // Refresh resumes
             const { data: resumeData } = await supabase
@@ -277,19 +275,45 @@ export default function EditProfilePage() {
                 setResumes(mappedResumes);
                 setLatestResume(mappedResumes[0]);
             }
+            return true;
         } catch (err) {
             console.error('Resume upload error:', err);
-            alert('Failed to upload resume.');
+            // Don't show alert here if called internally, or handle errors gracefully
+            return false;
         } finally {
             setUploading(false);
         }
     };
 
+    const handleDirectResumeSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        const success = await uploadResumeFile(file);
+        if (success) {
+            setToastContent({ title: 'Success', description: 'Resume uploaded successfully!' });
+            setShowToast(true);
+        } else {
+            alert('Failed to upload resume.');
+        }
+
+        if (event.target) event.target.value = ''; // Reset input
+    };
+
     const initiateAnalysis = async (file: File) => {
+        // 1. Check environment variable first
+        const envKey = import.meta.env.VITE_GEMINI_API_KEY;
+        if (envKey) {
+            handleResumeAnalysis(envKey, file);
+            return;
+        }
+
+        // 2. Check local storage
         const storedKey = localStorage.getItem('gemini_api_key');
         if (storedKey) {
             handleResumeAnalysis(storedKey, file);
         } else {
+            // 3. Prompt user
             setTempAnalyzeFile(file);
             setShowApiKeyModal(true);
         }
@@ -300,12 +324,24 @@ export default function EditProfilePage() {
         setShowApiKeyModal(false);
         try {
             localStorage.setItem('gemini_api_key', key);
+
+            // Auto-upload if no resume exists
+            if (!latestResume) {
+                setToastContent({ title: 'Uploading...', description: 'Uploading resume before analysis...' });
+                setShowToast(true);
+                await uploadResumeFile(file);
+            }
+
             const text = await extractTextFromPDF(file);
             const parsed = await parseResumeWithGemini(text, key);
 
-            if (parsed.fullName) {
-                setProfileFields(prev => ({ ...prev, fullName: parsed.fullName || prev.fullName }));
-            }
+            setProfileFields(prev => ({
+                ...prev,
+                fullName: parsed.fullName || prev.fullName,
+                school: parsed.school || prev.school,
+                graduation: parsed.graduationDate || prev.graduation
+            }));
+
             if (parsed.education && parsed.education.length > 0) {
                 for (const edu of parsed.education) {
                     await addEducation(user!.id, edu);
@@ -468,14 +504,25 @@ export default function EditProfilePage() {
                                         </Button>
                                     </div>
                                 </div>
+
+                                {/* Hidden input for direct upload */}
+                                <input
+                                    type="file"
+                                    ref={resumeUploadInputRef}
+                                    className="hidden"
+                                    accept=".pdf,.docx,.doc"
+                                    onChange={handleDirectResumeSelected}
+                                />
+
                                 <button
                                     type="button"
-                                    onClick={() => setShowUploadModal(true)}
-                                    className="mt-3 flex w-full items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-brand shadow-sm transition hover:border-brand"
+                                    onClick={() => resumeUploadInputRef.current?.click()}
+                                    disabled={uploading}
+                                    className="mt-3 flex w-full items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-brand shadow-sm transition hover:border-brand disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     <span className="flex items-center gap-2">
                                         <UploadCloud className="h-4 w-4" />
-                                        <span>{latestResume ? 'Upload new resume' : 'Upload resume'}</span>
+                                        <span>{uploading ? 'Uploading...' : (latestResume ? 'Upload new resume' : 'Upload resume')}</span>
                                     </span>
                                     <span className="text-xs text-gray-500">.pdf .docx</span>
                                 </button>
@@ -549,38 +596,7 @@ export default function EditProfilePage() {
                 </div>
             </div>
 
-            {/* Resume Upload Modal */}
-            <Modal open={showUploadModal} onClose={() => setShowUploadModal(false)}>
-                <div className="w-full max-w-md bg-white rounded-2xl p-6 shadow-xl">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Upload Resume</h3>
-                    <label className="flex cursor-pointer items-center justify-between gap-2 rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-700 transition hover:border-brand">
-                        <span className="flex items-center gap-2">
-                            <UploadCloud className="h-4 w-4 text-brand" />
-                            <span>{uploadFileName || 'Choose file'}</span>
-                        </span>
-                        <input
-                            type="file"
-                            className="hidden"
-                            accept=".pdf,.docx,.doc"
-                            onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) {
-                                    setUploadFile(file);
-                                    setUploadFileName(file.name);
-                                }
-                            }}
-                        />
-                    </label>
-                    <div className="flex justify-end gap-2 mt-4">
-                        <Button variant="ghost" onClick={() => { setShowUploadModal(false); setUploadFileName(''); setUploadFile(null); }}>
-                            Cancel
-                        </Button>
-                        <Button variant="primary" onClick={handleResumeUpload} disabled={!uploadFile || uploading}>
-                            {uploading ? 'Uploading...' : 'Upload'}
-                        </Button>
-                    </div>
-                </div>
-            </Modal>
+            {/* Modal removed */}
 
             {/* API Key Modal */}
             <Modal open={showApiKeyModal} onClose={() => setShowApiKeyModal(false)}>

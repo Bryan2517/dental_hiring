@@ -89,7 +89,7 @@ export interface Conversation {
   };
   seeker?: {
     id: string;
-    full_name: string;
+    name: string;
     avatar_url?: string | null;
   };
   job?: {

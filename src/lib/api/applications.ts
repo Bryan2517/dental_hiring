@@ -10,7 +10,7 @@ type SeekerProfileRow = Database['public']['Tables']['seeker_profiles']['Row'];
 // Helper to map database application to frontend Application type
 function mapApplicationToFrontend(
   app: ApplicationRow,
-  profile: ProfileRow | null,
+  profile: Partial<ProfileRow> | null,
   job?: any
 ): Application {
   const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -19,7 +19,7 @@ function mapApplicationToFrontend(
     jobId: app.job_id,
     status: capitalize(app.status) as JobStage,
     appliedAt: app.created_at,
-    candidateName: profile?.full_name || 'Unknown',
+    candidateName: profile?.name || 'Unknown',
     jobTitle: job?.title || 'Unknown Job',
     clinicName: job?.organizations?.org_name || 'Unknown Clinic',
     location: job?.city || job?.organizations?.city || '',
@@ -30,7 +30,7 @@ function mapApplicationToFrontend(
 // Helper to map database application + profile to Candidate type
 function mapApplicationToCandidate(
   app: ApplicationRow & { is_favorite?: boolean },
-  profile: ProfileRow | null,
+  profile: Partial<ProfileRow> | null,
   seekerProfile: SeekerProfileRow | null,
   job: { title: string } | null,
   resume: { storage_path: string } | null
@@ -40,19 +40,19 @@ function mapApplicationToCandidate(
 
   return {
     id: app.id,
-    name: profile?.full_name || 'Unknown',
+    name: profile?.name || 'Unknown',
     school: seekerProfile?.school_name || 'Unknown',
     gradDate: seekerProfile?.expected_graduation_date ? seekerProfile.expected_graduation_date.substring(0, 7) : '',
     skills,
     status: capitalize(app.status) as JobStage,
     rating: 4.0, // Default rating, can be calculated later
-    city: profile?.city || '',
+    city: '',
     notes: app.employer_notes || undefined,
     jobId: app.job_id,
     jobTitle: job?.title || 'Unknown Role',
     isFavorite: app.is_favorite,
     resumePath: resume?.storage_path,
-    seekerId: profile?.id
+    seekerId: profile?.user_id
   };
 }
 
@@ -67,9 +67,9 @@ export async function getApplications(filters?: {
     .select(`
       *,
       profiles!applications_seeker_user_id_fkey (
-        id,
-        full_name,
-        city
+        user_id,
+        name,
+        name
       ),
       jobs!applications_job_id_fkey (
         title,
@@ -115,20 +115,12 @@ export async function getApplications(filters?: {
 }
 
 export async function getCandidatesForOrg(orgId: string): Promise<Candidate[]> {
-  const { data, error } = await supabase
+  // 1. Fetch applications first
+  const { data: applications, error: appError } = await supabase
     .from('applications')
     .select(`
       *,
       is_favorite,
-      profiles!applications_seeker_user_id_fkey (
-        id,
-        full_name,
-        city,
-        seeker_profiles (
-          school_name,
-          expected_graduation_date
-        )
-      ),
       jobs!applications_job_id_fkey (
         title
       ),
@@ -138,22 +130,70 @@ export async function getCandidatesForOrg(orgId: string): Promise<Candidate[]> {
     `)
     .eq('org_id', orgId);
 
-  if (error) {
-    console.error('Error fetching candidates:', error);
-    throw error;
+  if (appError) {
+    console.error('Error fetching candidates (applications):', appError);
+    throw appError;
   }
 
-  return (data || []).map((item) => {
-    const profile = Array.isArray(item.profiles) ? item.profiles[0] : item.profiles;
-    // seeker_profiles is now nested inside profile
+  if (!applications || applications.length === 0) {
+
+    return [];
+  }
+
+  // 2. Extract seeker IDs
+  const seekerIds = Array.from(new Set(applications.map(app => app.seeker_user_id)));
+
+
+  // 3. Fetch profiles and seeker_profiles separately
+  const { data: profiles, error: profileError } = await supabase
+    .from('profiles')
+    .select(`
+      user_id,
+      name,
+      seeker_profiles (
+        school_name,
+        expected_graduation_date
+      )
+    `)
+    .in('user_id', seekerIds);
+
+  if (profileError) {
+    console.error('Error fetching candidate profiles:', profileError);
+  }
+
+
+
+  // 4. Map profiles to a dictionary for easy lookup
+  const profileMap = new Map();
+  if (profiles) {
+    profiles.forEach(p => {
+      profileMap.set(p.user_id, p);
+    });
+  }
+
+  // 5. Combine and map
+  const candidates: Candidate[] = [];
+
+  applications.forEach((item) => {
+    const profile = profileMap.get(item.seeker_user_id);
+
+    // If profile doesn't exist (orphan application), usage Unknown placeholder
+    if (!profile) {
+
+    }
+
+    // seeker_profiles is nested inside profile in the result of the second query
     const seekerProfile = profile && 'seeker_profiles' in profile
       ? (Array.isArray(profile.seeker_profiles) ? profile.seeker_profiles[0] : profile.seeker_profiles)
       : null;
+
     const job = Array.isArray(item.jobs) ? item.jobs[0] : item.jobs;
     const resume = Array.isArray(item.seeker_documents) ? item.seeker_documents[0] : item.seeker_documents;
 
-    return mapApplicationToCandidate(item as any, profile, seekerProfile as SeekerProfileRow | null, job, resume as any);
+    candidates.push(mapApplicationToCandidate(item as any, profile, seekerProfile as SeekerProfileRow | null, job, resume as any));
   });
+
+  return candidates;
 }
 
 export async function toggleCandidateFavorite(applicationId: string, isFavorite: boolean): Promise<void> {
@@ -184,20 +224,20 @@ export async function createApplication(applicationData: {
       status: applicationData.status || 'applied',
       screening_answers: applicationData.screening_answers || {},
     })
-    .select(`
-      *,
-      profiles!applications_seeker_user_id_fkey (
-        id,
-        full_name,
-        city
-      )
-    `)
+    .select()
     .single();
 
   if (error) {
     console.error('Error creating application:', error);
     throw error;
   }
+
+  // Fetch profile separately to avoid RLS/Join issues in the transaction return
+  const { data: profileData } = await supabase
+    .from('profiles')
+    .select('user_id, name')
+    .eq('user_id', applicationData.seeker_user_id)
+    .single();
 
   // Create application event
   await supabase
@@ -209,8 +249,7 @@ export async function createApplication(applicationData: {
       payload: { status: data.status },
     });
 
-  const profile = Array.isArray(data.profiles) ? data.profiles[0] : data.profiles;
-  return mapApplicationToFrontend(data, profile);
+  return mapApplicationToFrontend(data, profileData);
 }
 
 export async function updateApplicationStatus(

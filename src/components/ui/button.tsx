@@ -1,7 +1,7 @@
 import { ButtonHTMLAttributes, ReactElement, ReactNode, cloneElement, isValidElement } from 'react';
 import { cn } from '../../lib/utils';
 
-type Variant = 'primary' | 'secondary' | 'outline' | 'ghost';
+type Variant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive';
 type Size = 'sm' | 'md' | 'lg' | 'xl' | 'icon';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -32,7 +32,8 @@ export function Button({
       'bg-white text-brand border border-brand/20 hover:border-brand/40 hover:shadow-md hover:-translate-y-0.5',
     outline:
       'border border-gray-200 text-gray-800 bg-white hover:border-brand hover:text-brand hover:shadow-md hover:-translate-y-0.5',
-    ghost: 'text-gray-700 hover:bg-gray-100'
+    ghost: 'text-gray-700 hover:bg-gray-100',
+    destructive: 'bg-red-600 text-white hover:bg-red-700 hover:shadow-md hover:-translate-y-0.5'
   };
 
   const sizeClasses: Record<Size, string> = {

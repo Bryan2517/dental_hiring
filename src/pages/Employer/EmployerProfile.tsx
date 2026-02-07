@@ -25,9 +25,9 @@ export default function EmployerProfile() {
 
     // User Profile API not fully established, so we'll likely fetch from 'profiles' or 'auth.users' metadata?
     // Usually standard pattern is a 'profiles' table.
-    // Let's assume 'profiles' table has 'full_name' etc.
+    // Standard pattern is a 'profiles' table.
 
-    const [fullName, setFullName] = useState('');
+    const [name, setName] = useState('');
     const [phone, setPhone] = useState('');
     const [email, setEmail] = useState('');
 
@@ -44,7 +44,7 @@ export default function EmployerProfile() {
                 const { data, error } = await supabase
                     .from('profiles')
                     .select('*')
-                    .eq('id', user!.id)
+                    .eq('user_id', user!.id)
                     .single();
 
                 if (error && error.code !== 'PGRST116') {
@@ -52,7 +52,7 @@ export default function EmployerProfile() {
                 }
 
                 if (data) {
-                    setFullName(data.full_name || '');
+                    setName(data.name || '');
                     setPhone(data.phone || '');
                 }
             } catch (err) {
@@ -71,10 +71,10 @@ export default function EmployerProfile() {
 
         try {
             const updates = {
-                id: user.id,
-                full_name: fullName,
-                phone_number: phone,
-                // email is usually read-only or handled via auth api
+                user_id: user.id,
+                name: name,
+                phone: phone,
+                email: user.email!, // Required by schema
                 updated_at: new Date().toISOString(),
             };
 
@@ -101,7 +101,7 @@ export default function EmployerProfile() {
             subtitle="Manage your personal account settings"
             hideNavigation
         >
-            <Breadcrumbs items={[{ label: 'Employer Home', to: '/employers' }, { label: 'Account Profile' }]} />
+            {/* <Breadcrumbs items={[{ label: 'Employer Home', to: '/employers' }, { label: 'Account Profile' }]} /> */}
 
             <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm space-y-6">
                 <form onSubmit={handleSave} className="grid gap-4 md:grid-cols-2">
@@ -115,8 +115,8 @@ export default function EmployerProfile() {
                     </div>
                     <Input
                         label="Full Name"
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
                         placeholder="Your full name"
                     />
                     <Input

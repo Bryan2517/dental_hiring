@@ -63,8 +63,14 @@ export default function ProfileDashboard() {
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
 
   const handleConfirmSignOut = async () => {
-    await signOut();
-    navigate('/');
+    console.log('ProfileDashboard: handleConfirmSignOut clicked');
+    try {
+      await signOut();
+      console.log('ProfileDashboard: signOut finished, navigating to /');
+      navigate('/');
+    } catch (e) {
+      console.error('ProfileDashboard: signOut failed', e);
+    }
   };
 
   // Real Data State
@@ -106,6 +112,7 @@ export default function ProfileDashboard() {
       const file = event.target.files[0];
       setAvatarUploading(true);
 
+      const initials = (profileFields.fullName || profileFields.email || '?').charAt(0).toUpperCase();
       const fileExt = file.name.split('.').pop();
       const filePath = `${user?.id}-${Math.random()}.${fileExt}`;
 
@@ -127,7 +134,7 @@ export default function ProfileDashboard() {
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ avatar_url: publicUrl })
-        .eq('id', user?.id);
+        .eq('user_id', user?.id);
 
       if (updateError) {
         throw updateError;
@@ -163,27 +170,49 @@ export default function ProfileDashboard() {
   const [applications, setApplications] = useState<any[]>([]);
   const [savedJobs, setSavedJobs] = useState<any[]>([]);
 
+  // Prevents infinite re-fetching on window focus
+  const lastFetchedUserId = useRef<string | null>(null);
+
   useEffect(() => {
-    if (!user) return;
+    if (!user?.id) {
+      console.log('ProfileDashboard: No user, stopping loading');
+      setLoading(false);
+      lastFetchedUserId.current = null; // Reset on logout
+      return;
+    }
+
+    // Skip if we already fetched for this user
+    if (lastFetchedUserId.current === user.id) {
+      console.log('ProfileDashboard: Skipping fetch, user already loaded', user.id);
+      return;
+    }
+
+    console.log('ProfileDashboard: User present, fetching data', user.id);
+    lastFetchedUserId.current = user.id; // Mark as fetched
 
     async function fetchData() {
+      if (!user?.id) return;
+
       setLoading(true);
+      console.log('ProfileDashboard: fetchData started');
       try {
         // 1. Fetch Profile Data (profiles + seeker_profiles)
+        console.log('ProfileDashboard: Fetching profile...');
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
-          .select('full_name, avatar_url, seeker_profiles(school_name, expected_graduation_date, clinical_exposures, seeker_type)')
-          .eq('id', user!.id)
+          .select('name, avatar_url, seeker_profiles(school_name, expected_graduation_date, clinical_exposures, seeker_type)')
+          .eq('user_id', user.id)
           .single();
 
         if (profileError) {
           console.error('Error fetching profile:', profileError);
         } else if (profileData) {
+          console.log('ProfileDashboard: Profile fetched');
           // Cast to any to safely handle the joined data structure
           const seekerData = Array.isArray(profileData.seeker_profiles) ? profileData.seeker_profiles[0] : profileData.seeker_profiles;
 
           setProfileFields({
-            fullName: profileData.full_name || '',
+            fullName: profileData.name || '',
             email: user.email || '', // Email from auth user, not profile table usually (unless stored there too)
             school: seekerData?.school_name || '',
             graduation: seekerData?.expected_graduation_date || '',
@@ -195,16 +224,18 @@ export default function ProfileDashboard() {
 
         // 2. Fetch Resumes (seeker_documents)
         // Order by created_at DESC to get latest
+        console.log('ProfileDashboard: Fetching documents...');
         const { data: docs, error: docsError } = await supabase
           .from('seeker_documents')
           .select('id, title, created_at, storage_path')
-          .eq('user_id', user!.id)
+          .eq('user_id', user.id)
           .eq('doc_type', 'resume')
           .order('created_at', { ascending: false });
 
         if (docsError) {
           console.error('Error fetching documents:', docsError);
         } else if (docs) {
+          console.log('ProfileDashboard: Documents fetched', docs.length);
           // Map to Resume type
           const mappedResumes: Resume[] = docs.map(d => ({
             id: d.id,
@@ -219,22 +250,27 @@ export default function ProfileDashboard() {
         }
 
         // 3. Fetch Applications
-        const apps = await getApplications({ seeker_user_id: user!.id });
+        console.log('ProfileDashboard: Fetching applications...');
+        const apps = await getApplications({ seeker_user_id: user.id });
+        console.log('ProfileDashboard: Applications fetched', apps.length);
         setApplications(apps);
 
         // 4. Fetch Saved Jobs
-        const saved = await getSavedJobs(user!.id);
+        console.log('ProfileDashboard: Fetching saved jobs...');
+        const saved = await getSavedJobs(user.id);
+        console.log('ProfileDashboard: Saved jobs fetched', saved.length);
         setSavedJobs(saved);
 
       } catch (err) {
         console.error('Unexpected error fetching dashboard data:', err);
       } finally {
+        console.log('ProfileDashboard: fetchData finished, setting loading false');
         setLoading(false);
       }
     }
 
     fetchData();
-  }, [user]);
+  }, [user?.id]);
 
   const handleFieldChange = (field: keyof typeof defaultProfileFields, value: string) => {
     setProfileFields((prev) => ({ ...prev, [field]: value }));
@@ -253,8 +289,8 @@ export default function ProfileDashboard() {
       // Update 'profiles' table (full_name)
       const { error: profileError } = await supabase
         .from('profiles')
-        .update({ full_name: profileFields.fullName })
-        .eq('id', user.id);
+        .update({ name: profileFields.fullName })
+        .eq('user_id', user.id);
 
       if (profileError) throw profileError;
 
@@ -505,7 +541,7 @@ export default function ProfileDashboard() {
       subtitle="Manage your dental profile, resumes, and saved jobs."
       hideNavigation
     >
-      <Breadcrumbs items={[{ label: 'Seeker Home', to: '/seekers' }, { label: 'Seekers Dashboard' }]} />
+      {/* <Breadcrumbs items={[{ label: 'Seeker Home', to: '/seekers' }, { label: 'Seekers Dashboard' }]} /> */}
       <Tabs
         tabs={[
           { id: 'profile', label: 'Profile' },
@@ -626,6 +662,7 @@ export default function ProfileDashboard() {
       }
 
 
+
       {
         activeTab === 'saved' && (
           <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
@@ -634,20 +671,24 @@ export default function ProfileDashboard() {
               {savedJobs.length === 0 ? (
                 <p className="text-sm text-gray-500">No saved jobs yet.</p>
               ) : (
-                savedJobs.map((job) => (
-                  <JobCard
-                    key={job.id}
-                    job={job}
-                    onApply={() => { }}
-                    isSaved={true}
-                    onToggleSave={async (j) => {
-                      if (window.confirm('Remove from saved jobs?')) {
-                        await unsaveJob(user!.id, j.id);
-                        setSavedJobs(prev => prev.filter(p => p.id !== j.id));
-                      }
-                    }}
-                  />
-                ))
+                savedJobs.map((job) => {
+                  const isApplied = applications.some(app => app.jobId === job.id);
+                  return (
+                    <JobCard
+                      key={job.id}
+                      job={job}
+                      onApply={(j) => navigate(`/jobs/${j.id}`)}
+                      isSaved={true}
+                      hasApplied={isApplied}
+                      onToggleSave={async (j) => {
+                        if (window.confirm('Remove from saved jobs?')) {
+                          await unsaveJob(user!.id, j.id);
+                          setSavedJobs(prev => prev.filter(p => p.id !== j.id));
+                        }
+                      }}
+                    />
+                  );
+                })
               )}
             </div>
           </div>

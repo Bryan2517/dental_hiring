@@ -72,8 +72,14 @@ export default function OrganizationProfile() {
                     setVerifiedStatus(org.verified_status);
                     setDescription(org.description || '');
                     setWebsiteUrl(org.website_url || '');
-                    setAddress1(org.address_line1 || '');
-                    setAddress2(org.address_line2 || '');
+                    setWebsiteUrl(org.website_url || '');
+
+                    // Split address column into address1 and address2
+                    const rawAddress = org.address || '';
+                    const addressParts = rawAddress.split('\n');
+                    setAddress1(addressParts[0] || '');
+                    setAddress2(addressParts[1] || '');
+
                     setCity(org.city || '');
                     setState(org.state || '');
                     setPostcode(org.postcode || '');
@@ -162,8 +168,7 @@ export default function OrganizationProfile() {
                 org_type: orgType,
                 description,
                 website_url: websiteUrl,
-                address_line1: address1,
-                address_line2: address2,
+                address: [address1, address2].filter(Boolean).join('\n'), // Combine address lines
                 city,
                 state,
                 postcode,
@@ -214,7 +219,7 @@ export default function OrganizationProfile() {
             subtitle="Manage your clinic or organization details."
             hideNavigation
         >
-            <Breadcrumbs items={[{ label: 'Employer Home', to: '/employers' }, { label: 'Organization Profile' }]} />
+            {/* <Breadcrumbs items={[{ label: 'Employer Home', to: '/employers' }, { label: 'Organization Profile' }]} /> */}
 
             {/* <Tabs
                 tabs={[

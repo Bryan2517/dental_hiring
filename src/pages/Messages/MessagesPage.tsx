@@ -34,7 +34,7 @@ export default function MessagesPage() {
                 openChat(orgId, seekerId, jobId || undefined);
             }
         }
-    }, [orgId, seekerId, jobId, userRole, user]);
+    }, [orgId, seekerId, jobId, userRole, user?.id]);
 
     // Use default sidebar links depending on role, typically managed by shell, but we can override or just pass empty if we want custom look.
     // However, DashboardShell usually handles navigation.

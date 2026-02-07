@@ -67,7 +67,7 @@ export default function SeekerPublicProfileEmbed({ userId }: SeekerPublicProfile
         );
     }
 
-    const initials = (profile.full_name || profile.email || '?')
+    const initials = (profile.name || profile.email || '?')
         .charAt(0)
         .toUpperCase();
 
@@ -77,27 +77,31 @@ export default function SeekerPublicProfileEmbed({ userId }: SeekerPublicProfile
 
     return (
         <div className="space-y-6">
-            {/* Edit Profile Button */}
-            <div className="flex justify-end">
-                <Button variant="outline" size="sm" onClick={() => navigate('/seekers/dashboard/edit')} icon={<Edit className="h-4 w-4" />}>
-                    Edit Profile
-                </Button>
-            </div>
-
             {/* Header Card */}
-            <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100">
+            <div className="relative bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100">
+                <div className="absolute top-4 right-4 z-10">
+                    <Button
+                        variant="secondary"
+                        size="sm"
+                        className="bg-white/80 hover:bg-white border-white/50 backdrop-blur-sm shadow-sm"
+                        onClick={() => navigate('/seekers/dashboard/edit')}
+                        icon={<Edit className="h-4 w-4" />}
+                    >
+                        Edit Profile
+                    </Button>
+                </div>
                 <div className="h-24 bg-gradient-to-r from-indigo-50 to-blue-50"></div>
                 <div className="px-6 pb-6">
                     <div className="relative -mt-10 mb-4">
                         <Avatar className="h-20 w-20 border-4 border-white shadow-md">
-                            <AvatarImage src={profile.avatar_url || ''} alt={profile.full_name || ''} />
+                            <AvatarImage src={profile.avatar_url || ''} alt={profile.name || ''} />
                             <AvatarFallback className="text-lg bg-gray-100 text-gray-600 font-bold">{initials}</AvatarFallback>
                         </Avatar>
                     </div>
 
                     <div>
                         <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                            <h2 className="text-3xl font-bold text-gray-900">{profile.full_name}</h2>
+                            <h2 className="text-3xl font-bold text-gray-900">{profile.name}</h2>
                             <Badge variant="info" className="w-fit text-sm py-1">{seekerTypeLabel}</Badge>
                         </div>
 
@@ -106,12 +110,7 @@ export default function SeekerPublicProfileEmbed({ userId }: SeekerPublicProfile
                         )}
 
                         <div className="flex flex-wrap items-center gap-4 mt-2 text-base text-gray-500">
-                            {(profile.city || profile.country) && (
-                                <div className="flex items-center gap-1">
-                                    <MapPin className="h-5 w-5" />
-                                    <span>{[profile.city, profile.country].filter(Boolean).join(', ')}</span>
-                                </div>
-                            )}
+                            {/* Location removed as not present in new schema */}
                             {seekerProfile?.years_experience !== null && seekerProfile?.years_experience !== undefined && (
                                 <div className="flex items-center gap-1">
                                     <Briefcase className="h-5 w-5" />

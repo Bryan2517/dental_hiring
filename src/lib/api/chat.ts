@@ -14,7 +14,7 @@ export async function getConversations(userId: string, role: 'seeker' | 'employe
         logo_url
       ),
       seeker:seeker_id (
-        full_name,
+        name,
         avatar_url
       ),
       job:job_id (
@@ -35,7 +35,7 @@ export async function getConversations(userId: string, role: 'seeker' | 'employe
                     .eq('conversation_id', conv.id)
                     .order('created_at', { ascending: false })
                     .limit(1)
-                    .single();
+                    .maybeSingle();
 
                 // Fetch unread count
                 const { count: unreadCount } = await supabase
@@ -224,7 +224,7 @@ async function fetchConversationById(id: string): Promise<Conversation | null> {
         logo_url
       ),
       seeker:seeker_id (
-        full_name,
+        name,
         avatar_url
       ),
        job:job_id (

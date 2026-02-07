@@ -11,7 +11,7 @@ export default function ConversationList() {
     const [searchTerm, setSearchTerm] = useState('');
 
     const filteredConversations = conversations.filter((c) => {
-        const name = userRole === 'seeker' ? c.organization?.org_name : c.seeker?.full_name;
+        const name = userRole === 'seeker' ? c.organization?.org_name : c.seeker?.name;
         return name?.toLowerCase().includes(searchTerm.toLowerCase());
     });
 
@@ -44,7 +44,7 @@ export default function ConversationList() {
                     <div className="divide-y divide-gray-50">
                         {filteredConversations.map((conv) => {
                             const isActive = activeConversation?.id === conv.id;
-                            const name = userRole === 'seeker' ? conv.organization?.org_name : conv.seeker?.full_name;
+                            const name = userRole === 'seeker' ? conv.organization?.org_name : conv.seeker?.name;
                             const avatar = userRole === 'seeker' ? conv.organization?.logo_url : conv.seeker?.avatar_url;
                             const subtitle = conv.job?.title || 'General Inquiry';
                             const lastMsg = conv.lastMessage?.content || 'Started a conversation';

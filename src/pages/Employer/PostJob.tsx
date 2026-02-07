@@ -100,7 +100,7 @@ export default function PostJob() {
       }
     }
     fetchOrg();
-  }, [user, navigate, isEditMode]);
+  }, [user?.id, navigate, isEditMode]);
 
   // Load existing data if edit mode
   useEffect(() => {
@@ -301,7 +301,7 @@ export default function PostJob() {
       subtitle={isEditMode ? "Update your job posting details." : "Fill in the details to find your next great hire."}
       hideNavigation
     >
-      <Breadcrumbs items={[{ label: 'Employer Home', to: '/employers' }, { label: 'Post Job' }]} />
+      {/* <Breadcrumbs items={[{ label: 'Employer Home', to: '/employers' }, { label: 'Post Job' }]} /> */}
       <Stepper steps={steps} activeStep={activeStep} />
 
       <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
